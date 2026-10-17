@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bass Coach</title>
+<meta name="description" content="Records a double bass scale and coaches tuning, hand frame, shifts and bow arm.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bass Coach">
+<meta name="theme-color" content="#EEF0EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121413" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one practice-log column; a tuner-style cents chart is the spine, findings hang off it. */
+:root{
+  --bg:#EEF0EC; --surface:#FAFBF8; --ink:#17191B; --muted:#5B625F; --line:#D5DAD3;
+  --accent:#2A3B8F; --accent-ink:#FFFFFF; --accent-soft:#DDE2F5;
+  --good:#1E7A4B; --warn:#A86A12; --bad:#B3261E; --band:#E3EDE5;
+  --f-display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --f-body:"Instrument Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121413; --surface:#1B1E1C; --ink:#E8EBE6; --muted:#9AA39E; --line:#2E3430;
+  --accent:#9AABFF; --accent-ink:#0E1430; --accent-soft:#252C4A;
+  --good:#4CC38A; --warn:#E3AA4E; --bad:#F2766C; --band:#1F2A23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121413; --surface:#1B1E1C; --ink:#E8EBE6; --muted:#9AA39E; --line:#2E3430;
+  --accent:#9AABFF; --accent-ink:#0E1430; --accent-soft:#252C4A;
+  --good:#4CC38A; --warn:#E3AA4E; --bad:#F2766C; --band:#1F2A23; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:30px;font-weight:700;line-height:1.1}
+h2{font-size:19px;font-weight:700}
+h3{font-size:16px;font-weight:600;font-family:var(--f-body);letter-spacing:0}
+p{margin:0}
+.eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+header{display:flex;flex-direction:column;gap:6px}
+header p{color:var(--muted);max-width:60ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}
+select,button,input{font:inherit}
+.txt{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;font-weight:500;width:100%}
+.txt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select{appearance:none;-webkit-appearance:none;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 36px 11px 12px;font-size:15px;font-weight:500;width:100%}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pick > *{min-width:0}
+@media (max-width:420px){.pick{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{min-width:0}
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:10px 16px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,select:focus-visible,.bar:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.fname{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.progress{display:flex;flex-direction:column;gap:6px}
+.track{height:6px;background:var(--line);border-radius:4px;overflow:hidden}
+.track i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:600;font-size:14px}
+details ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:14px}
+.example{display:flex;gap:10px;align-items:baseline;background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.example b{font-weight:600}
+.stage{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;max-width:100%}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage video{object-fit:contain}
+.stage .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#C9CEC9;font-size:14px;padding:20px;background:repeating-linear-gradient(135deg,#1a1c1b 0 12px,#151716 12px 24px)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stat{background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--f-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .k{font-size:12px;color:var(--muted)}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+.chartbox{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+.chartbox svg{display:block}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.bar{cursor:pointer}
+.detail{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.detail .nm{font-family:var(--f-display);font-size:20px;font-weight:700}
+.findings{display:flex;flex-direction:column;gap:10px}
+.find{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 14px 14px 16px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.find::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--sevc)}
+.find .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pill{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--sevc);white-space:nowrap}
+.find p{font-size:14px;color:var(--muted);max-width:65ch}
+.drill{font-size:14px;background:var(--bg);border-radius:8px;padding:10px 12px;max-width:65ch}
+.drill b{font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:4px 9px;font:500 13px var(--f-mono);cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.coach{white-space:pre-wrap;font-size:16px;line-height:1.6;max-width:62ch}
+.note-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.note-card .coach{font-family:var(--f-body)}
+details.numbers{border-top:1px solid var(--line);padding-top:12px}
+details.numbers > summary{font-family:var(--f-display);font-size:17px;font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.tablebox{overflow-x:auto}
+.sec{display:flex;flex-direction:column;gap:12px}
+.toggle{font-size:13px;display:inline-flex;gap:8px;align-items:center;color:var(--muted)}
+.err{color:var(--bad);font-size:14px}
+@media (prefers-reduced-motion:reduce){.track i{transition:none}}
+
+/* Recording screen: always dark, like a camera app */
+.rec{position:fixed;inset:0;z-index:50;background:#000;color:#F2F4F1;font-family:var(--f-body);overflow:hidden;touch-action:manipulation}
+.rec video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.rec .guide{position:absolute;left:max(7%,env(safe-area-inset-left,0px));right:max(7%,env(safe-area-inset-right,0px));top:calc(118px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));border:2px dashed rgba(255,255,255,.45);border-radius:14px;pointer-events:none;display:flex;justify-content:center;align-items:flex-start}
+.rec .guide span{margin-top:-11px;background:#000;padding:0 10px;font-size:12.5px;color:rgba(255,255,255,.8);border-radius:6px;text-align:center}
+.rec .rot{display:none}
+@media (orientation:portrait){.rec .rot{display:block;position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);padding:10px 14px;border-radius:10px;font-size:14px;text-align:center;max-width:80%}}
+.rec-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));background:linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,0))}
+.rec-ex{display:flex;flex-direction:column;min-width:0;flex:1}
+.rec-ex b{font-family:var(--f-display);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-ex span{font-size:11.5px;color:rgba(255,255,255,.7)}
+.rec-time{font-size:15px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12)}
+.rec-time.live{background:#D7263D;color:#fff}
+.rbtn{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:18px;cursor:pointer;flex:none}
+.rec-strip{position:absolute;left:max(14px,env(safe-area-inset-left,0px));right:max(110px,calc(env(safe-area-inset-right,0px) + 100px));top:calc(62px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;gap:4px}
+.rec-strip i{font:500 12px var(--f-mono);font-style:normal;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.75)}
+.rec-strip i.next{outline:2px solid #fff;color:#fff}
+.rec-strip i.g{background:#2E9E62;color:#fff}.rec-strip i.w{background:#C9861C;color:#fff}.rec-strip i.b{background:#D2452F;color:#fff}
+.rec-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-size:min(40vw,40vh);font-weight:700;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.6);pointer-events:none}
+.tuner{position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(320px,56vw);background:rgba(0,0,0,.6);border-radius:14px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:14px;align-items:center}
+.tn{grid-row:1/3;font-family:var(--f-display);font-size:40px;font-weight:700;min-width:2.2ch;text-align:center;line-height:1}
+.tbar{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,rgba(210,69,47,.55),rgba(201,134,28,.55) 30%,rgba(46,158,98,.7) 42%,rgba(46,158,98,.7) 58%,rgba(201,134,28,.55) 70%,rgba(210,69,47,.55))}
+.tbar i{position:absolute;top:-5px;width:4px;height:20px;border-radius:2px;background:#fff;left:50%;transform:translateX(-50%);transition:left .08s linear;opacity:0}
+.tc{font-size:12.5px;color:rgba(255,255,255,.8);margin-top:4px}
+.rec-ctl{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;width:110px;text-align:center}
+.rec-ctl span{font-size:12px;color:rgba(255,255,255,.85)}
+@media (orientation:portrait){.rec-ctl{top:auto;transform:none;bottom:calc(120px + env(safe-area-inset-bottom,0px));right:50%;margin-right:-55px}.tuner{left:50%;transform:translateX(-50%);width:min(340px,86vw)}.rec-strip{right:max(14px,env(safe-area-inset-right,0px))}}
+.recbig{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:transparent;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.recbig i{display:block;width:56px;height:56px;border-radius:50%;background:#D7263D;transition:all .15s}
+.recbig.on i{width:30px;height:30px;border-radius:6px}
+.recbig:disabled{opacity:.5}
+.recbig:focus-visible,.rbtn:focus-visible{outline:3px solid #9AABFF;outline-offset:3px}
+.rec-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.75);padding:14px 18px;border-radius:12px;font-size:15px;text-align:center;max-width:80%}
+@media (prefers-reduced-motion:reduce){.tbar i,.recbig i{transition:none}}
+
+.rec.recording .guide{border-color:rgba(255,255,255,.18)}
+.rec.recording .guide span{display:none}
+
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Double bass · Trinity scales, Grades 4 and 5</span>
+    <h1>Bass Coach</h1>
+    <p>Record a scale or load a clip. It checks every note's tuning and links the misses to what the left hand, shifts and bow arm were doing.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="newh">
+    <h2 id="newh">New session</h2>
+    <label class="f">Exercise (Trinity scales book, from 2016)<select id="pSel"></select></label>
+    <div class="pick" id="custom" hidden>
+      <label class="f">Key<select id="kSel"></select></label>
+      <label class="f">What he's playing<select id="tSel"></select></label>
+      <label class="f">Range<select id="rSel"></select></label>
+      <label class="f">Starts on<select id="oSel"><option value="0">Lowest key note on the bass</option><option value="1">The key note an octave higher</option></select></label>
+    </div>
+    <p id="exNote" class="muted" style="font-size:13px"></p>
+    <label class="f">Tracking detail
+      <select id="fpsSel">
+        <option value="6">Standard, faster to process</option>
+        <option value="10">Fine, better for quick shifts</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="recBtn" class="btn primary">Record</button>
+      <input id="recIn" type="file" accept="video/*" capture="environment" hidden>
+      <span class="btn file">Choose a clip<input id="fileIn" type="file" accept="video/*"></span>
+      <button id="goBtn" class="btn" disabled>Analyse</button>
+      <span id="fname" class="fname">No clip chosen</span>
+    </div>
+    <div id="prog" class="progress" hidden>
+      <div class="track"><i id="progBar"></i></div>
+      <span id="progTxt" class="muted" style="font-size:13px"></span>
+    </div>
+    <p id="errTxt" class="err" hidden></p>
+    <details>
+      <summary>How to film it</summary>
+      <ul>
+        <li>Use the Record button here: it sets the camera to 1080p, 30 fps and switches off the phone's voice processing so the tuning is measured cleanly.</li>
+        <li>Landscape, on the stand about 1.5 m away, at chest height, angled from his front-left so the left hand and the fingerboard face the camera.</li>
+        <li>Get head, both arms and the bass down to the bridge in frame. Light on the fingerboard helps the finger tracking.</li>
+        <li>Quiet room, no metronome or drone on speaker during the take. One exercise per clip, at exam tempo.</li>
+      </ul>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="checkBtn">Check this phone is ready</button>
+        <span id="checkTxt" class="muted" style="font-size:13px">Downloads the tracking models (about 45 MB) so the first analysis starts faster.</span>
+      </div>
+    </details>
+    <details>
+      <summary>Names</summary>
+      <div class="pick" style="margin-top:12px">
+        <label class="f">Player's name<input id="nmPlayer" class="txt" autocomplete="off" placeholder="Used in the coach's note"></label>
+        <label class="f">Teacher's name<input id="nmTeacher" class="txt" autocomplete="off" placeholder="The note follows their teaching style"></label>
+      </div>
+      <p class="muted" style="font-size:13px;margin-top:8px">Kept on this phone only.</p>
+    </details>
+  </section>
+
+  <section id="results" class="sec" aria-labelledby="resh">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="resh">Session report</h2>
+      <span id="resEx" class="muted" style="font-size:14px"></span>
+    </div>
+    <div id="exampleBanner" class="example"><b>Example</b><span>Made-up numbers showing what a report looks like. Record or load a clip to replace it.</span></div>
+
+    <div class="stage" id="stage">
+      <video id="vid" playsinline muted preload="auto" hidden></video>
+      <canvas id="ovl" hidden></canvas>
+      <div class="empty" id="stageEmpty">The video plays here with the hand and arm tracking drawn over it.</div>
+    </div>
+    <div class="row" id="vidCtl" hidden>
+      <button class="btn" id="playNote">Play selected note</button>
+      <label class="toggle"><input type="checkbox" id="skel" checked> Show tracking</label>
+      <button class="btn" id="saveVid" hidden>Save video</button>
+    </div>
+
+    <article class="note-card" aria-labelledby="noteh">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <h3 id="noteh">Your coach's note</h3>
+        <span class="eyebrow" id="styleTag"></span>
+      </div>
+      <div class="coach" id="coachTxt"></div>
+      <p class="muted" id="coachStatus" style="font-size:13px"></p>
+    </article>
+
+    <details class="numbers" id="numbers">
+    <summary>What the tracking measured</summary>
+    <div class="sec" style="margin-top:14px">
+    <div class="stats" id="stats"></div>
+
+    <div class="sec">
+      <div class="row" style="justify-content:space-between">
+        <h3>Tuning, note by note</h3>
+        <div class="chart-legend">
+          <span><i class="sw" style="background:var(--good)"></i>within 15¢</span>
+          <span><i class="sw" style="background:var(--warn)"></i>15 to 30¢</span>
+          <span><i class="sw" style="background:var(--bad)"></i>over 30¢</span>
+          <span>▾ shift</span>
+        </div>
+      </div>
+      <div class="chartbox" id="chartBox"></div>
+      <div class="detail" id="noteDetail"></div>
+    </div>
+
+    <div class="sec">
+      <h3>Each finding</h3>
+      <div class="findings" id="findings"></div>
+    </div>
+    </div>
+    </details>
+  </section>
+
+  <section class="sec" aria-labelledby="histh">
+    <h2 id="histh">Recent sessions</h2>
+    <div class="tablebox"><table id="hist"><thead><tr><th>Date</th><th>Exercise</th><th>In tune</th><th>Notes</th><th>Shifts</th></tr></thead><tbody></tbody></table></div>
+    <p class="muted" id="histEmpty" style="font-size:14px">Sessions you analyse on this phone are listed here so you can track progress toward the exam.</p>
+  </section>
+</div>
+<div id="recView" class="rec" hidden role="dialog" aria-label="Record an exercise">
+  <video id="recVid" playsinline muted autoplay></video>
+  <div class="guide"><span>Head, both arms and the bass down to the bridge inside the frame</span></div>
+  <div class="rot">Turn the phone sideways for the best view of both hands</div>
+  <div class="rec-top">
+    <button class="rbtn" id="recClose" aria-label="Close without saving">✕</button>
+    <div class="rec-ex"><b id="recExName"></b><span id="recMeta" class="mono">Starting the camera…</span></div>
+    <div class="rec-time mono" id="recTime">0:00</div>
+  </div>
+  <div class="rec-strip" id="recStrip" aria-hidden="true"></div>
+  <div class="rec-count" id="recCount" hidden></div>
+  <div class="tuner" aria-live="off"><span class="tn" id="tnNote">–</span><div class="tbar"><i id="tnNeedle"></i></div><span class="tc mono" id="tnCents">Play a note to check the sound</span></div>
+  <div class="rec-ctl"><button class="recbig" id="recGo" aria-label="Start recording" disabled><i></i></button><span id="recHint">Tap to start. It stops by itself when the exercise is done.</span></div>
+  <div class="rec-msg" id="recMsg" hidden></div>
+</div>
+
+<script src="mp/hands/hands.js"></script>
+<script src="mp/pose/pose.js"></script>
+<script>
+// ===== Bass Coach analysis core (pure functions, no DOM) =====
+const Core = (() => {
+  const NS = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+  const NF = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+  const pc = m => ((m % 12) + 12) % 12;
+  // flats: boolean, or {flats, over: {pc: name}} for raised notes in minor keys
+  const noteName = (m, flats, oct) => {
+    const r = Math.round(m);
+    const ov = flats && typeof flats === 'object' ? flats.over || {} : {};
+    const fl = flats && typeof flats === 'object' ? flats.flats : flats;
+    const s = ov[pc(r)] || (fl ? NF : NS)[pc(r)];
+    return oct ? s + (Math.floor(r / 12) - 1) : s;
+  };
+  const hzToMidi = f => 69 + 12 * Math.log2(f / 440);
+  const midiToHz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  const median = a => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); const h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+  const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN;
+  const std = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(mean(a.map(v => (v - m) ** 2))); };
+  const fin = v => typeof v === 'number' && isFinite(v);
+
+  // ---------- Exercise library (sounding pitch; bass sounds an octave below written) ----------
+  // ---------- Exercise builder (sounding pitch; lowest note on a 4-string bass is E1 = MIDI 28) ----------
+  const KEYS = [['C',0],['D♭',1],['D',2],['E♭',3],['E',4],['F',5],['F♯',6],['G',7],['A♭',8],['A',9],['B♭',10],['B',11]];
+  const TYPES = [
+    ['major','Major scale'],['harm','Harmonic minor scale'],['mel','Melodic minor scale'],['nat','Natural minor scale'],
+    ['arpMaj','Major arpeggio'],['arpMin','Minor arpeggio'],['chrom','Chromatic scale (starting on the key note)'],
+    ['dom7','Dominant 7th (in the key)'],['dim7','Diminished 7th (starting on the key note)'],['free','Free play: piece or study']
+  ];
+  const RANGES = [[12,'One octave'],[19,'A 12th'],[24,'Two octaves']];
+  const PATS = { major:[0,2,4,5,7,9,11], harm:[0,2,3,5,7,8,11], melUp:[0,2,3,5,7,9,11], nat:[0,2,3,5,7,8,10],
+    arpMaj:[0,4,7], arpMin:[0,3,7], chrom:[0,1,2,3,4,5,6,7,8,9,10,11], dom7:[0,4,7,10], dim7:[0,3,6,9] };
+  const up = (start, pat, span) => { const o = []; for (let oc = 0; oc * 12 <= span; oc++) for (const p of pat) { const v = oc * 12 + p; if (v <= span) o.push(start + v); } return o; };
+  const lowest = pc => { let m = 28; while (((m % 12) + 12) % 12 !== pc) m++; return m; };
+  const keyName = pc => KEYS.find(k => k[1] === pc)[0];
+  function build(o) {
+    const key = +o.key, type = o.type, span = +o.range, higher = !!o.higher;
+    const tname = TYPES.find(t => t[0] === type)[1];
+    if (type === 'free') return { id: 'free', label: 'Free play', flats: [1,3,5,8,10].includes(key), notes: null };
+    const minorish = ['harm','mel','nat','arpMin'].includes(type);
+    const flats = minorish ? [0,2,3,5,7,10].includes(key) : type === 'dim7' ? true : [1,3,5,8,10].includes(key);
+    let spell = flats;
+    if (flats && (type === 'harm' || type === 'mel')) { const over = {}; [(key + 11) % 12, (key + 9) % 12].forEach(p => { over[p] = NS[p]; }); spell = { flats: true, over }; }
+    const startPc = type === 'dom7' ? (key + 7) % 12 : key;
+    const s = lowest(startPc) + (higher ? 12 : 0);
+    let notes;
+    if (type === 'mel') notes = up(s, PATS.melUp, span).concat(up(s, PATS.nat, span).reverse().slice(1));
+    else if (type === 'dom7') { const a = up(s, PATS.dom7, span); notes = a.concat(a.slice(1, -1).reverse(), [s + 5]); } // root, 3rd, 5th, 7th, octave, back to the 3rd, resolve to the tonic
+    else { const a = up(s, PATS[type], span); notes = a.concat(a.slice(0, -1).reverse()); }
+    const rname = RANGES.find(r => r[0] === span)[1].toLowerCase();
+    const label = `${keyName(key)} ${tname.replace(' (starting on the key note)', '').replace(' (in the key)', ' in ' + keyName(key))}, ${rname}${higher ? ', upper octave' : ''}`;
+    return { id: [key, type, span, higher ? 1 : 0].join('-'), label, flats: spell, notes };
+  }
+
+  // ---------- Pitch tracking (YIN) ----------
+  function downsample2(x) { const y = new Float32Array(x.length >> 1); for (let i = 0; i < y.length; i++) y[i] = 0.5 * (x[2 * i] + x[2 * i + 1]); return y; }
+
+  function yinTrack(x, sr, opt = {}) {
+    const minF = opt.minF || 36, maxF = opt.maxF || 440, N = opt.win || 1024, hop = opt.hop || 256, thr = opt.thr || 0.15;
+    const tMin = Math.max(2, Math.floor(sr / maxF)), tMax = Math.ceil(sr / minF);
+    const d = new Float64Array(tMax + 2), c = new Float64Array(tMax + 2);
+    const raw = [];
+    let maxRms = 0;
+    for (let s = 0; s + N + tMax + 1 < x.length; s += hop) {
+      let e = 0; for (let i = 0; i < N; i++) { const v = x[s + i]; e += v * v; }
+      const rms = Math.sqrt(e / N); if (rms > maxRms) maxRms = rms;
+      raw.push({ s, rms });
+    }
+    const gate = Math.max(maxRms * 0.08, 1e-4);
+    const out = [];
+    for (const fr of raw) {
+      const t = (fr.s + N / 2) / sr;
+      if (fr.rms < gate) { out.push({ t, f: 0, conf: 0, rms: fr.rms }); continue; }
+      const s = fr.s;
+      for (let tau = 1; tau <= tMax; tau++) {
+        let sum = 0; for (let i = 0; i < N; i++) { const df = x[s + i] - x[s + i + tau]; sum += df * df; }
+        d[tau] = sum;
+      }
+      c[0] = 1; let run = 0;
+      for (let tau = 1; tau <= tMax; tau++) { run += d[tau]; c[tau] = run > 0 ? d[tau] * tau / run : 1; }
+      let tau = -1;
+      for (let k = tMin; k < tMax; k++) {
+        if (c[k] < thr) { while (k + 1 < tMax && c[k + 1] < c[k]) k++; tau = k; break; }
+      }
+      if (tau < 0) { // fall back to global minimum when reasonably periodic
+        let best = tMin; for (let k = tMin; k < tMax; k++) if (c[k] < c[best]) best = k;
+        if (c[best] < 0.3) tau = best;
+      }
+      if (tau < 0) { out.push({ t, f: 0, conf: 0, rms: fr.rms }); continue; }
+      let tr = tau;
+      if (tau > 1 && tau < tMax) { const a = c[tau - 1], b = c[tau], g = c[tau + 1]; const den = a - 2 * b + g; if (den !== 0) tr = tau + 0.5 * (a - g) / den; }
+      out.push({ t, f: sr / tr, conf: 1 - c[tau], rms: fr.rms });
+    }
+    return out;
+  }
+
+  // ---------- Note segmentation ----------
+  function segment(track, opt = {}) {
+    const minDur = opt.minDur || 0.12, tol = 0.55, maxGap = 0.07;
+    const segs = []; let cur = null;
+    const close = () => { if (cur && cur.fr.length && cur.fr[cur.fr.length - 1].t - cur.fr[0].t >= minDur) segs.push(cur.fr); cur = null; };
+    for (const fr of track) {
+      if (fr.f > 0) {
+        const m = hzToMidi(fr.f);
+        if (cur && Math.abs(m - cur.ref) < tol && fr.t - cur.last < maxGap) {
+          cur.fr.push({ ...fr, m }); cur.ms.push(m); cur.last = fr.t;
+          if (cur.ms.length <= 12 || cur.ms.length % 4 === 0) cur.ref = median(cur.ms);
+        } else { close(); cur = { fr: [{ ...fr, m }], ms: [m], ref: m, last: fr.t }; }
+      } else if (cur && fr.t - cur.last > maxGap) close();
+    }
+    close();
+    const notes = segs.map(fr => {
+      const t0 = fr[0].t, t1 = fr[fr.length - 1].t, dur = t1 - t0;
+      const mid = fr.filter(f => f.t >= t0 + 0.2 * dur && f.t <= t0 + 0.88 * dur);
+      const core = mid.length >= 3 ? mid : fr;
+      const mMed = median(core.map(f => f.m));
+      const n = Math.round(mMed);
+      const centsArr = core.map(f => (f.m - n) * 100);
+      const land = fr.filter(f => f.t >= t0 + 0.03 && f.t <= t0 + 0.14).map(f => (f.m - n) * 100);
+      const rmsArr = core.map(f => f.rms);
+      return {
+        t0, t1, n, cents: median(centsArr),
+        landing: land.length ? median(land) : median(centsArr),
+        wobble: std(centsArr),
+        ampCv: std(rmsArr) / (mean(rmsArr) || 1),
+        trace: fr.map(f => [f.t, (f.m - n) * 100])
+      };
+    });
+    // merge same-note segments split by a quick bow change
+    const merged = [];
+    for (const nt of notes) {
+      const p = merged[merged.length - 1];
+      if (p && p.n === nt.n && nt.t0 - p.t1 < 0.06) {
+        const w0 = p.t1 - p.t0, w1 = nt.t1 - nt.t0;
+        p.cents = (p.cents * w0 + nt.cents * w1) / (w0 + w1);
+        p.t1 = nt.t1; p.trace = p.trace.concat(nt.trace); p.wobble = Math.max(p.wobble, nt.wobble);
+      } else merged.push(nt);
+    }
+    return merged;
+  }
+
+  // ---------- Alignment of played notes to expected notes ----------
+  function align(played, expected) {
+    const P = played.length, E = expected.length, INF = 1e9;
+    const D = Array.from({ length: P + 1 }, () => new Float64Array(E + 1).fill(INF));
+    const B = Array.from({ length: P + 1 }, () => new Int8Array(E + 1));
+    D[0][0] = 0;
+    for (let i = 0; i <= P; i++) for (let j = 0; j <= E; j++) {
+      if (i > 0 && j > 0) {
+        const diff = played[i - 1] - expected[j - 1];
+        const cost = diff === 0 ? 0 : (diff % 12 === 0 ? 0.2 : 1);
+        if (D[i - 1][j - 1] + cost < D[i][j]) { D[i][j] = D[i - 1][j - 1] + cost; B[i][j] = 1; }
+      }
+      if (i > 0 && D[i - 1][j] + 1 < D[i][j]) { D[i][j] = D[i - 1][j] + 1; B[i][j] = 2; }
+      if (j > 0 && D[i][j - 1] + 1 < D[i][j]) { D[i][j] = D[i][j - 1] + 1; B[i][j] = 3; }
+    }
+    const ops = []; let i = P, j = E;
+    while (i > 0 || j > 0) {
+      const b = B[i][j];
+      if (b === 1) { ops.push({ p: i - 1, e: j - 1 }); i--; j--; }
+      else if (b === 2) { ops.push({ p: i - 1, e: -1 }); i--; }
+      else { ops.push({ p: -1, e: j - 1 }); j--; }
+    }
+    return ops.reverse();
+  }
+
+  // ---------- Vision geometry ----------
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0));
+  const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  function angle(a, b, c) {
+    const v1 = [a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0)], v2 = [c.x - b.x, c.y - b.y, (c.z || 0) - (b.z || 0)];
+    const d = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+    const n = Math.hypot(...v1) * Math.hypot(...v2);
+    return n ? Math.acos(Math.max(-1, Math.min(1, d / n))) * 180 / Math.PI : NaN;
+  }
+  const vis = (p, k = 0.5) => p && (p.v === undefined || p.v >= k);
+
+  // Per-frame features. Points are in height units (x already multiplied by aspect).
+  function frameFeatures(fr) {
+    const o = {}; const L = fr.lh, P = fr.pose;
+    let sw = NaN;
+    if (P && vis(P[11]) && vis(P[12])) sw = dist2(P[11], P[12]);
+    if (L) {
+      const hs = dist(L[0], L[9]);
+      if (hs > 0) {
+        o.span = dist(L[8], L[20]) / hs;
+        o.curl = mean([angle(L[5], L[6], L[7]), angle(L[9], L[10], L[11]), angle(L[13], L[14], L[15]), angle(L[17], L[18], L[19])]);
+        const ref = fin(sw) ? sw : hs * 2.2;
+        o.lx = L[0].x / ref; o.ly = L[0].y / ref;
+      }
+    }
+    if (P && fin(sw)) {
+      if (vis(P[12]) && vis(P[14]) && vis(P[16])) { o.elbow = angle(P[12], P[14], P[16]); o.elbowLift = (P[16].y - P[14].y) / sw; }
+      if (vis(P[7], 0.4) && vis(P[8], 0.4)) o.neck = (((P[11].y + P[12].y) / 2) - ((P[7].y + P[8].y) / 2)) / sw;
+      o.tilt = (P[11].y - P[12].y) / sw;
+    }
+    return o;
+  }
+
+  function fuse(notes, frames) {
+    const feats = frames.map(f => ({ t: f.t, ...frameFeatures(f) }));
+    for (const nt of notes) {
+      const dur = nt.t1 - nt.t0;
+      let fs = feats.filter(f => f.t >= nt.t0 + 0.2 * dur && f.t <= nt.t1 - 0.1 * dur);
+      if (!fs.length) { const mid = (nt.t0 + nt.t1) / 2; let best = null; for (const f of feats) if (!best || Math.abs(f.t - mid) < Math.abs(best.t - mid)) best = f; if (best && Math.abs(best.t - mid) < 0.25) fs = [best]; }
+      for (const k of ['span', 'curl', 'lx', 'ly', 'elbow', 'elbowLift', 'neck', 'tilt']) {
+        const v = fs.map(f => f[k]).filter(fin); nt[k] = v.length ? median(v) : NaN;
+      }
+    }
+    // shifts: left wrist travel between consecutive notes
+    const moves = [];
+    for (let i = 1; i < notes.length; i++) {
+      const a = notes[i - 1], b = notes[i];
+      b.move = fin(a.lx) && fin(b.lx) ? Math.hypot(b.lx - a.lx, b.ly - a.ly) : NaN;
+      if (fin(b.move)) moves.push(b.move);
+    }
+    const mm = median(moves);
+    const thr = Math.max(0.1, fin(mm) ? 2.5 * mm : 0.1);
+    notes.forEach((n, i) => { n.shift = i > 0 && fin(n.move) && n.move > thr; });
+    // frame span corrected for neck position (spacing shrinks higher up)
+    const pts = notes.filter(n => fin(n.span) && fin(n.ly));
+    if (pts.length >= 6) {
+      const mx = mean(pts.map(n => n.ly)), my = mean(pts.map(n => n.span));
+      const sxx = pts.reduce((s, n) => s + (n.ly - mx) ** 2, 0), sxy = pts.reduce((s, n) => s + (n.ly - mx) * (n.span - my), 0);
+      const k = sxx > 1e-9 ? sxy / sxx : 0;
+      notes.forEach(n => { n.spanRes = fin(n.span) && fin(n.ly) ? (n.span - (my + k * (n.ly - mx))) / my : NaN; });
+    } else notes.forEach(n => { n.spanRes = NaN; });
+    return notes;
+  }
+
+  // ---------- Coaching findings ----------
+  const fmtC = c => (c > 0 ? '+' : c < 0 ? '−' : '') + Math.abs(Math.round(c)) + '¢';
+  function analyse(notes, ex) {
+    const flats = ex ? ex.flats : false;
+    const name = i => noteName(notes[i].n, flats);
+    const F = [];
+    const tuned = notes.filter(n => Math.abs(n.cents) <= 15).length;
+    const sum = { total: notes.length, inTune: tuned, pct: notes.length ? Math.round(100 * tuned / notes.length) : 0 };
+    const signed = notes.map(n => n.cents).filter(c => Math.abs(c) < 50);
+    sum.tendency = mean(signed);
+
+    // correctness against the exercise
+    if (ex && ex.notes) {
+      const ops = align(notes.map(n => n.n), ex.notes);
+      let correct = 0; const wrong = [], missed = [];
+      for (const o of ops) {
+        if (o.p >= 0 && o.e >= 0) {
+          const nt = notes[o.p]; nt.expected = ex.notes[o.e];
+          const diff = nt.n - nt.expected;
+          if (diff === 0) { nt.status = 'ok'; correct++; }
+          else if (diff % 12 === 0) { nt.status = 'ok'; nt.octaveFix = true; correct++; }
+          else { nt.status = 'wrong'; wrong.push(o.p); }
+        } else if (o.p >= 0) { notes[o.p].status = 'extra'; }
+        else missed.push(o.e);
+      }
+      sum.correct = correct; sum.expected = ex.notes.length;
+      if (wrong.length || missed.length) {
+        const parts = wrong.slice(0, 4).map(i => `${name(i)} played where ${noteName(notes[i].expected, flats)} belongs (note ${i + 1})`);
+        if (missed.length) parts.push(`${missed.length} note${missed.length > 1 ? 's' : ''} of the pattern not heard`);
+        F.push({ id: 'notes', sev: wrong.length ? 3 : 2, area: 'Notes', title: wrong.length ? `${wrong.length} wrong note${wrong.length > 1 ? 's' : ''} in the pattern` : 'Some notes not picked up',
+          detail: parts.join('; ') + '.', drill: 'Say the note names aloud while playing slowly once, then play it again from memory. In flat keys, check every E♭, A♭ and B♭ against the key signature before the bow moves.', notes: wrong });
+      } else if (notes.length) {
+        F.push({ id: 'notes', sev: 0, area: 'Notes', title: 'Every note of the pattern was correct', detail: `${correct} of ${ex.notes.length} notes matched the exercise.`, drill: '', notes: [] });
+      }
+    }
+
+    // overall intonation
+    const flatIdx = notes.map((n, i) => n.cents < -15 ? i : -1).filter(i => i >= 0);
+    const sharpIdx = notes.map((n, i) => n.cents > 15 ? i : -1).filter(i => i >= 0);
+    if (notes.length) {
+      const sev = sum.pct >= 80 ? 0 : sum.pct >= 60 ? 1 : sum.pct >= 40 ? 2 : 3;
+      let lean = '';
+      if (fin(sum.tendency) && sum.tendency < -6) lean = ` Overall he leans flat (average ${fmtC(sum.tendency)}).`;
+      else if (fin(sum.tendency) && sum.tendency > 6) lean = ` Overall he leans sharp (average ${fmtC(sum.tendency)}).`;
+      F.push({ id: 'tune', sev, area: 'Intonation', title: `${sum.pct}% of notes within 15 cents`,
+        detail: `${flatIdx.length} flat and ${sharpIdx.length} sharp beyond 15 cents.${lean}`,
+        drill: sev ? 'Play the scale against a tonic drone, stopping on each note until it rings with the drone. Slow is the point: about half exam tempo.' : '',
+        notes: flatIdx.concat(sharpIdx).sort((a, b) => Math.abs(notes[b].cents) - Math.abs(notes[a].cents)) });
+    }
+
+    // shifts
+    const S = notes.map((n, i) => n.shift ? i : -1).filter(i => i >= 0);
+    const O = notes.map((n, i) => !n.shift && i > 0 && fin(n.move) ? i : -1).filter(i => i >= 0);
+    sum.shifts = S.length;
+    if (S.length >= 2) {
+      const sAbs = mean(S.map(i => Math.abs(notes[i].cents))), oAbs = O.length ? mean(O.map(i => Math.abs(notes[i].cents))) : sAbs;
+      const adjust = S.filter(i => Math.abs(notes[i].landing - notes[i].cents) > 15 && Math.abs(notes[i].landing) > Math.abs(notes[i].cents));
+      const badS = S.filter(i => Math.abs(notes[i].cents) > 15);
+      sum.shiftsOk = S.length - badS.length;
+      const signedS = mean(S.map(i => notes[i].cents));
+      const badO = O.filter(i => Math.abs(notes[i].cents) > 15).length / (O.length || 1);
+      if (sAbs > oAbs + 7 || badS.length / S.length > badO + 0.25) {
+        const dir = signedS < -8 ? ' They tend to land short (flat), so the shift is too small.' : signedS > 8 ? ' They tend to overshoot (sharp), so the shift is too big.' : '';
+        F.push({ id: 'shift', sev: badS.length > S.length / 2 ? 3 : 2, area: 'Shifts', title: `Notes after shifts are out by ${Math.round(sAbs)}¢ on average`,
+          detail: `${badS.length} of ${S.length} shifts landed more than 15 cents out, against ${Math.round(oAbs)}¢ on notes without a shift.${dir}`,
+          drill: 'Shift with the old finger sliding audibly to the new position (guide finger), then repeat with the slide quieter each time. Check the landing note against the open string or a drone.', notes: badS });
+      } else F.push({ id: 'shift', sev: 0, area: 'Shifts', title: 'Shifts land as accurately as other notes', detail: `${S.length} shifts detected, averaging ${Math.round(sAbs)}¢ off.`, drill: '', notes: [] });
+      if (adjust.length >= 2) F.push({ id: 'landing', sev: 1, area: 'Shifts', title: `Corrects pitch after landing on ${adjust.length} shifts`,
+        detail: 'The first moment of the note is further out than where it settles, so he is fixing it with the finger after arriving. Examiners hear that slide.',
+        drill: 'Stop the bow before each shift, move the hand silently, then play. Aim to arrive in tune without adjusting.', notes: adjust });
+    }
+
+    // left-hand frame vs intonation
+    const withSpan = notes.map((n, i) => fin(n.spanRes) ? i : -1).filter(i => i >= 0);
+    if (withSpan.length >= 6) {
+      const fl = flatIdx.filter(i => fin(notes[i].spanRes)), sh = sharpIdx.filter(i => fin(notes[i].spanRes));
+      const rest = withSpan.filter(i => Math.abs(notes[i].cents) <= 15);
+      const restM = rest.length ? mean(rest.map(i => notes[i].spanRes)) : 0;
+      if (fl.length >= 2 && mean(fl.map(i => notes[i].spanRes)) - restM < -0.05) {
+        const pct = Math.round(-100 * (mean(fl.map(i => notes[i].spanRes)) - restM));
+        F.push({ id: 'frame', sev: 2, area: 'Left hand', title: 'Hand frame narrows on the flat notes',
+          detail: `On flat notes his first-to-fourth finger span is about ${pct}% narrower than on in-tune notes at the same place on the neck. The fourth finger is creeping toward the second.`,
+          drill: 'Set the 1-2-4 frame silently before playing each position and keep all three fingers down as he goes up the scale. Check the 1 to 4 whole tone against a drone.', notes: fl });
+      }
+      if (sh.length >= 2 && mean(sh.map(i => notes[i].spanRes)) - restM > 0.05) {
+        F.push({ id: 'stretch', sev: 2, area: 'Left hand', title: 'Hand overstretches on the sharp notes',
+          detail: 'On sharp notes the frame is wider than on in-tune notes at the same place on the neck.',
+          drill: 'Practise the frame higher up the neck where spacing gets closer: the same whole tone needs a smaller span.', notes: sh });
+      }
+      if (!F.some(f => f.id === 'frame' || f.id === 'stretch')) {
+        const cv = std(withSpan.map(i => notes[i].spanRes));
+        F.push({ id: 'frame', sev: cv > 0.12 ? 1 : 0, area: 'Left hand', title: cv > 0.12 ? 'Hand frame is inconsistent' : 'Hand frame is steady',
+          detail: cv > 0.12 ? `His finger span varies by about ${Math.round(cv * 100)}% from note to note, more than the position changes explain.` : 'Finger spacing stays consistent across positions, and it does not explain his tuning errors.',
+          drill: cv > 0.12 ? 'Silent frame practice: place 1, 2 and 4 together, lift and replace ten times per position before playing.' : '', notes: [] });
+      }
+    }
+    const curlIdx = notes.map((n, i) => fin(n.curl) && n.curl > 165 ? i : -1).filter(i => i >= 0);
+    const curlN = notes.filter(n => fin(n.curl)).length;
+    if (curlN >= 6 && curlIdx.length / curlN > 0.25) {
+      F.push({ id: 'curl', sev: 1, area: 'Left hand', title: `Fingers flatten on ${curlIdx.length} notes`,
+        detail: 'The finger joints straighten instead of staying rounded, which usually means pressing with the pad and gripping from the thumb.',
+        drill: 'Keep a rounded hand as if holding a ball. Release thumb pressure: play a note, then gently lift the thumb off the neck and keep the note ringing.', notes: curlIdx });
+    }
+
+    // bow arm and tone
+    const el = notes.map(n => n.elbow).filter(fin);
+    const wob = notes.map((n, i) => n.ampCv > 0.35 ? i : -1).filter(i => i >= 0);
+    if (el.length >= 6) {
+      const sd = std(el);
+      const lifts = notes.filter(n => fin(n.elbowLift));
+      let link = '';
+      if (wob.length >= 2 && lifts.length >= 6) {
+        const w = wob.map(i => notes[i].elbowLift).filter(fin), r = lifts.filter(n => !(n.ampCv > 0.35)).map(n => n.elbowLift);
+        if (w.length >= 2 && r.length && mean(w) - mean(r) > 0.08) link = ' The uneven notes come with a dropped bow elbow.';
+      }
+      F.push({ id: 'bowarm', sev: sd > 18 || link ? 2 : 0, area: 'Bow arm', title: sd > 18 ? 'Bow arm shape changes a lot between notes' : 'Bow arm is consistent',
+        detail: `Elbow angle varies by ±${Math.round(sd)}°.${link}`,
+        drill: sd > 18 || link ? 'Long open-string bows in front of the camera: elbow leads string crossings and stays at the level of the string being played.' : '', notes: link ? wob : [] });
+    }
+    if (wob.length >= 3) F.push({ id: 'tone', sev: wob.length > notes.length / 3 ? 2 : 1, area: 'Bow arm', title: `Uneven sound on ${wob.length} notes`,
+      detail: 'Volume swells or dips within the note, usually from bow speed or weight changing mid-stroke.',
+      drill: 'Divide the bow into equal parts for each note and keep the contact point halfway between bridge and fingerboard end.', notes: wob });
+
+    // posture
+    const nk = notes.map(n => n.neck).filter(fin);
+    if (nk.length >= 9) {
+      const third = Math.floor(nk.length / 3), a = mean(nk.slice(0, third)), b = mean(nk.slice(-third));
+      if (a > 0 && (a - b) / a > 0.12) F.push({ id: 'shoulders', sev: 2, area: 'Posture', title: 'Shoulders creep up during the exercise',
+        detail: `The gap between ears and shoulders shrinks by ${Math.round(100 * (a - b) / a)}% from start to finish. Tension tends to arrive with the higher positions.`,
+        drill: 'Before each repeat, lift the shoulders, then drop them fully. Breathe out on the first note.', notes: [] });
+      else F.push({ id: 'shoulders', sev: 0, area: 'Posture', title: 'Shoulders stay relaxed', detail: 'No rise in shoulder height over the exercise.', drill: '', notes: [] });
+    }
+
+    const handCover = notes.length ? notes.filter(n => fin(n.span)).length / notes.length : 1;
+    sum.handCover = handCover;
+    if (notes.length && handCover < 0.4) F.push({ id: 'camera', sev: 1, area: 'Setup', title: 'Left hand only seen on ' + Math.round(handCover * 100) + '% of notes',
+      detail: 'Hand analysis needs the left hand clearly visible against the neck.', drill: 'Put the phone at front-left, about 1.5 m away at chest height, with more light on the fingerboard.', notes: [] });
+
+    F.sort((a, b) => b.sev - a.sev);
+    return { summary: sum, findings: F };
+  }
+
+  return { KEYS, TYPES, RANGES, build, noteName, hzToMidi, midiToHz, median, mean, std, fin, downsample2, yinTrack, segment, align, fuse, analyse, fmtC, frameFeatures };
+})();
+
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const C = Core;
+  const state = { ex: null, notes: [], frames: [], res: null, example: true, sel: -1, aspect: 16 / 9, file: null };
+
+  // ---------- exercise picker (set it to match the page in his Trinity book) ----------
+  const fill = (id, rows) => { const s = $(id); rows.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); }); };
+  fill('kSel', C.KEYS.map(([n, v]) => [v, n])); fill('tSel', C.TYPES); fill('rSel', C.RANGES);
+  // Trinity double bass scales from 2016 (his book), Grades 4 and 5. Starting octaves checked against the printed music.
+  const P = (g, label, key, type, range, higher) => ({ g, label, o: { key, type, range, higher: !!higher } });
+  const PRESETS = [
+    P(5, 'G major scale, two octaves', 7, 'major', 24), P(5, 'G major arpeggio, two octaves', 7, 'arpMaj', 24),
+    P(5, 'C major scale, to the 12th', 0, 'major', 19), P(5, 'C major arpeggio, to the 12th', 0, 'arpMaj', 19),
+    P(5, 'B♭ major scale, to the 12th', 10, 'major', 19), P(5, 'B♭ major arpeggio, to the 12th', 10, 'arpMaj', 19),
+    P(5, 'E♭ major scale, one octave', 3, 'major', 12), P(5, 'E♭ major arpeggio, one octave', 3, 'arpMaj', 12),
+    P(5, 'G harmonic minor, two octaves', 7, 'harm', 24), P(5, 'G melodic minor, two octaves', 7, 'mel', 24), P(5, 'G minor arpeggio, two octaves', 7, 'arpMin', 24),
+    P(5, 'C harmonic minor, to the 12th', 0, 'harm', 19), P(5, 'C melodic minor, to the 12th', 0, 'mel', 19), P(5, 'C minor arpeggio, to the 12th', 0, 'arpMin', 19),
+    P(5, 'B♭ harmonic minor, to the 12th', 10, 'harm', 19), P(5, 'B♭ melodic minor, to the 12th', 10, 'mel', 19), P(5, 'B♭ minor arpeggio, to the 12th', 10, 'arpMin', 19),
+    P(5, 'Chromatic starting on E♭', 3, 'chrom', 12), P(5, 'Chromatic starting on G', 7, 'chrom', 12, true),
+    P(5, 'Dominant 7th in F, starting on C', 5, 'dom7', 12), P(5, 'Dominant 7th in E♭, starting on B♭', 3, 'dom7', 12),
+    P(5, 'Diminished 7th starting on C', 0, 'dim7', 12), P(5, 'Diminished 7th starting on B♭', 10, 'dim7', 12),
+    P(4, 'A major scale, to the 12th', 9, 'major', 19), P(4, 'A major arpeggio, to the 12th', 9, 'arpMaj', 19),
+    P(4, 'G major scale, to the 12th', 7, 'major', 19), P(4, 'G major arpeggio, to the 12th', 7, 'arpMaj', 19),
+    P(4, 'F major scale, to the 12th', 5, 'major', 19), P(4, 'F major arpeggio, to the 12th', 5, 'arpMaj', 19),
+    P(4, 'A harmonic minor, to the 12th', 9, 'harm', 19), P(4, 'A melodic minor, to the 12th', 9, 'mel', 19), P(4, 'A minor arpeggio, to the 12th', 9, 'arpMin', 19),
+    P(4, 'G harmonic minor, to the 12th', 7, 'harm', 19), P(4, 'G melodic minor, to the 12th', 7, 'mel', 19), P(4, 'G minor arpeggio, to the 12th', 7, 'arpMin', 19),
+    P(4, 'Dominant 7th in C, starting on G', 0, 'dom7', 12), P(4, 'Dominant 7th in B♭, starting on F', 10, 'dom7', 12),
+    P(4, 'Chromatic starting on C', 0, 'chrom', 12), P(4, 'Chromatic starting on D', 2, 'chrom', 12)
+  ];
+  const ps = $('pSel');
+  [5, 4].forEach(g => { const og = document.createElement('optgroup'); og.label = `Grade ${g}`; PRESETS.forEach((x, i) => { if (x.g === g) { const o = document.createElement('option'); o.value = i; o.textContent = x.label; og.appendChild(o); } }); ps.appendChild(og); });
+  { const og = document.createElement('optgroup'); og.label = 'Other'; [['free', 'Piece, study or free play'], ['custom', 'Set it myself']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; og.appendChild(o); }); ps.appendChild(og); }
+  const PK = 'basscoach.pick2';
+  try { const s = JSON.parse(localStorage.getItem(PK) || 'null'); if (s) { ps.value = s.p; $('kSel').value = s.k; $('tSel').value = s.t; $('rSel').value = s.r; $('oSel').value = s.o; } else { ps.value = '0'; $('kSel').value = 9; $('rSel').value = 19; } } catch (e) { ps.value = '0'; }
+  const currentEx = () => {
+    const v = ps.value;
+    if (v === 'free') return C.build({ key: 0, type: 'free', range: 12 });
+    if (v === 'custom') return C.build({ key: $('kSel').value, type: $('tSel').value, range: $('rSel').value, higher: $('oSel').value === '1' });
+    const pr = PRESETS[+v]; const e = C.build(pr.o); e.label = `Grade ${pr.g}: ${pr.label}`; e.id = 'tcl-' + v; return e;
+  };
+  const exNote = () => {
+    $('custom').hidden = ps.value !== 'custom';
+    const e = currentEx(); const free = !e.notes;
+    ['kSel', 'rSel', 'oSel'].forEach(id => { $(id).disabled = free; });
+    $('exNote').textContent = free ? 'Tuning and technique are checked, but not which notes he should play.' : 'Expects: ' + e.notes.map(n => C.noteName(n, e.flats)).join(' ');
+  };
+  ['pSel', 'kSel', 'tSel', 'rSel', 'oSel'].forEach(id => $(id).addEventListener('change', () => { exNote(); try { localStorage.setItem(PK, JSON.stringify({ p: ps.value, k: $('kSel').value, t: $('tSel').value, r: $('rSel').value, o: $('oSel').value })); } catch (e) {} }));
+  exNote();
+
+  // ---------- file ----------
+  const fileIn = $('fileIn');
+  const onPick = inp => () => {
+    const f = inp.files && inp.files[0]; state.file = f || null; state.pcm = null; state.recorded = false;
+    $('fname').textContent = f ? `${f.name} · ${(f.size / 1048576).toFixed(0)} MB` : 'No clip chosen';
+    $('goBtn').disabled = !f; $('errTxt').hidden = true;
+    if (f && inp.id === 'recIn') $('goBtn').click();
+  };
+  fileIn.addEventListener('change', onPick(fileIn));
+  $('recIn').addEventListener('change', onPick($('recIn')));
+
+  const showErr = msg => { $('errTxt').textContent = msg; $('errTxt').hidden = false; $('prog').hidden = true; $('goBtn').disabled = !state.file; };
+  const prog = (p, txt) => { $('prog').hidden = false; $('progBar').style.width = Math.round(p * 100) + '%'; $('progTxt').textContent = txt; };
+
+  // ---------- models ----------
+  const HV = '0.4.1675469240', PV = '0.5.1675469404';
+  let models = null;
+  async function loadModels() {
+    if (models) return models;
+    if (typeof Hands === 'undefined' || typeof Pose === 'undefined') throw new Error('The tracking library did not load. Check the connection and reload the page.');
+    const hands = new Hands({ locateFile: f => `mp/hands/${f}` });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    let hRes = null; hands.onResults(r => { hRes = r; });
+    await hands.initialize();
+    const pose = new Pose({ locateFile: f => `mp/pose/${f}` });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    let pRes = null; pose.onResults(r => { pRes = r; });
+    await pose.initialize();
+    models = {
+      async hands(img) { hRes = null; await hands.send({ image: img }); return hRes; },
+      async pose(img) { pRes = null; await pose.send({ image: img }); return pRes; }
+    };
+    return models;
+  }
+
+  $('checkBtn').addEventListener('click', async () => {
+    const b = $('checkBtn'), t = $('checkTxt'); b.disabled = true; t.textContent = 'Loading the hand and pose models...';
+    const t0 = performance.now();
+    try {
+      const m = await loadModels();
+      const cv = document.createElement('canvas'); cv.width = 320; cv.height = 240;
+      const g = cv.getContext('2d'); g.fillStyle = '#556'; g.fillRect(0, 0, 320, 240);
+      await m.hands(cv); await m.pose(cv);
+      t.textContent = `Ready. Models loaded and tested in ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+    } catch (e) { console.error(e); t.textContent = 'Tracking could not start here: ' + (e && e.message ? e.message : e); b.disabled = false; }
+  });
+
+  // ---------- audio ----------
+  async function readAudio(file) {
+    const buf = await file.arrayBuffer();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    let ab;
+    try { ab = await new Promise((res, rej) => { const p = ctx.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); }); }
+    finally { try { ctx.close(); } catch (e) {} }
+    return resampleBuffer(ab);
+  }
+  async function resampleBuffer(ab) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const sr = 22050, len = Math.ceil(ab.duration * sr);
+    const off = new OAC(1, len, sr);
+    const src = off.createBufferSource(); src.buffer = ab; src.connect(off.destination); src.start();
+    const out = await new Promise((res, rej) => { off.oncomplete = e => res(e.renderedBuffer); const p = off.startRendering(); if (p && p.then) p.then(res, rej); });
+    return { x: C.downsample2(out.getChannelData(0)), sr: sr / 2 };
+  }
+
+  // ---------- video tracking ----------
+  const vid = $('vid');
+  const seek = t => new Promise(res => {
+    let done = false; const fin = () => { if (!done) { done = true; vid.removeEventListener('seeked', fin); res(); } };
+    vid.addEventListener('seeked', fin); vid.currentTime = t; setTimeout(fin, 2000);
+  });
+  const scale = (pts, a) => pts.map(p => ({ x: p.x * a, y: p.y, z: (p.z || 0) * a, v: p.visibility }));
+
+  async function trackVideo(fps, onP) {
+    const m = await loadModels();
+    const a = vid.videoWidth / vid.videoHeight || 16 / 9; state.aspect = a;
+    const frames = []; const dur = isFinite(vid.duration) && vid.duration > 0 ? vid.duration : (state.recDur || 0); const step = 1 / fps; const t0 = performance.now();
+    for (let t = Math.min(0.05, dur / 2); t < dur; t += step) {
+      await seek(t);
+      const hr = await m.hands(vid), pr = await m.pose(vid);
+      const fr = { t, lh: null, rh: null, pose: null };
+      if (pr && pr.poseLandmarks) fr.pose = scale(pr.poseLandmarks, a);
+      const hs = (hr && hr.multiHandLandmarks) || [];
+      hs.forEach((h, i) => {
+        const pts = scale(h, a); let left;
+        if (fr.pose) { const P = fr.pose, w = pts[0]; left = Math.hypot(w.x - P[15].x, w.y - P[15].y) < Math.hypot(w.x - P[16].x, w.y - P[16].y); }
+        else { const lab = hr.multiHandedness && hr.multiHandedness[i] && hr.multiHandedness[i].label; left = lab === 'Right'; }
+        if (left && !fr.lh) fr.lh = pts; else if (!left && !fr.rh) fr.rh = pts;
+      });
+      frames.push(fr);
+      const done = t / dur, el = (performance.now() - t0) / 1000;
+      const eta = done > 0.05 ? Math.round(el / done - el) : null;
+      onP(done, `Tracking hands and arms · ${Math.round(done * 100)}%${eta !== null ? ` · about ${eta < 60 ? eta + ' s' : Math.ceil(eta / 60) + ' min'} left` : ''}`);
+    }
+    return frames;
+  }
+
+  // ---------- run ----------
+  $('goBtn').addEventListener('click', () => runAnalysis());
+  async function ensureDuration() {
+    if (isFinite(vid.duration) && vid.duration > 0) return;
+    await new Promise(res => { const done = () => { vid.removeEventListener('durationchange', done); res(); }; vid.addEventListener('durationchange', done); vid.currentTime = 1e7; setTimeout(done, 3000); });
+    vid.currentTime = 0;
+  }
+  async function runAnalysis() {
+    const f = state.file; if (!f) return;
+    $('goBtn').disabled = true; $('errTxt').hidden = true;
+    if (f.size > 400 * 1048576) return showErr('That clip is over 400 MB. Re-record at 1080p, 30 fps, or trim it to one exercise.');
+    const ex = currentEx();
+    try {
+      prog(0.02, 'Opening the clip');
+      const url = URL.createObjectURL(f);
+      vid.hidden = false; $('stageEmpty').hidden = true; vid.muted = true; vid.src = url;
+      await new Promise((res, rej) => { vid.onloadeddata = res; vid.onerror = () => rej(new Error('This video format will not open here. Record with the iPhone Camera app and try again.')); });
+      try { await vid.play(); vid.pause(); } catch (e) {}
+      await ensureDuration();
+      prog(0.05, 'Listening to the notes');
+      let audio = state.pcm;
+      if (!audio) { try { audio = await readAudio(f); } catch (e) { throw new Error('Could not read the sound from this clip. Record it again, or use the iPhone Camera app in Video mode.'); } }
+      const track = C.yinTrack(audio.x, audio.sr);
+      const notes = C.segment(track);
+      if (notes.length < 3) throw new Error('Only ' + notes.length + ' clear notes were heard. Move the phone closer or play with a fuller sound.');
+      prog(0.1, 'Loading the hand and pose models (first time takes a while)');
+      const fps = +$('fpsSel').value;
+      const frames = await trackVideo(fps, (p, txt) => prog(0.1 + 0.85 * p, txt));
+      prog(0.97, 'Building the report');
+      C.fuse(notes, frames);
+      const res = C.analyse(notes, ex.notes ? ex : null);
+      Object.assign(state, { ex, notes, frames, res, example: false, sel: -1 });
+      saveHistory(ex, res.summary);
+      render();
+      $('prog').hidden = true; $('goBtn').disabled = false;
+      $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      console.error(e); showErr(e && e.message ? e.message : 'Something went wrong while analysing the clip.');
+    }
+  }
+
+  // ---------- rendering ----------
+  const colorFor = c => Math.abs(c) <= 15 ? 'var(--good)' : Math.abs(c) <= 30 ? 'var(--warn)' : 'var(--bad)';
+  const sevColor = s => ['var(--good)', 'var(--accent)', 'var(--warn)', 'var(--bad)'][s];
+  const sevLabel = s => ['Going well', 'Worth a look', 'Work on this', 'Fix first'][s];
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function render() {
+    const { notes, res, ex } = state;
+    $('exampleBanner').hidden = !state.example;
+    $('resEx').textContent = ex.label;
+    const s = res.summary;
+    const stats = [
+      [s.pct + '%', 'notes in tune (±15¢)'],
+      [s.expected ? `${s.correct}/${s.expected}` : String(s.total), s.expected ? 'pattern notes correct' : 'notes heard'],
+      [s.shifts ? `${s.shiftsOk ?? s.shifts}/${s.shifts}` : '–', 'shifts landed in tune'],
+      [C.fin(s.tendency) ? C.fmtC(s.tendency) : '–', 'average lean']
+    ];
+    $('stats').innerHTML = stats.map(([v, k]) => `<div class="stat"><span class="v">${esc(v)}</span><span class="k">${esc(k)}</span></div>`).join('');
+    drawChart();
+    renderFindings();
+    selectNote(state.sel >= 0 ? state.sel : worstNote(), false);
+    $('vidCtl').hidden = state.example;
+    $('ovl').hidden = state.example;
+    $('saveVid').hidden = state.example || !state.recorded;
+    showNote();
+  }
+  $('numbers').addEventListener('toggle', () => { if ($('numbers').open && state.notes.length) { drawChart(); selectNote(state.sel, false); } });
+
+  const worstNote = () => { let w = 0; state.notes.forEach((n, i) => { if (Math.abs(n.cents) > Math.abs(state.notes[w].cents)) w = i; }); return w; };
+
+  function drawChart() {
+    const ns = state.notes, flats = state.ex.flats;
+    const per = 22, padL = 34, padR = 8, top = 18, h = 150, bottomPad = 34;
+    const box = $('chartBox'); const avail = Math.max(300, box.clientWidth || 340);
+    const W = Math.max(avail, padL + padR + per * ns.length);
+    const bw = (W - padL - padR) / ns.length;
+    const y = c => top + (h / 2) * (1 - Math.max(-50, Math.min(50, c)) / 50);
+    let g = `<svg width="${W}" height="${top + h + bottomPad}" viewBox="0 0 ${W} ${top + h + bottomPad}" role="img" aria-label="Cents off for each note">`;
+    g += `<rect x="${padL}" y="${y(15)}" width="${W - padL - padR}" height="${y(-15) - y(15)}" fill="var(--band)"/>`;
+    [50, 30, 15, 0, -15, -30, -50].forEach(c => {
+      g += `<line x1="${padL}" x2="${W - padR}" y1="${y(c)}" y2="${y(c)}" stroke="var(--line)" stroke-width="${c === 0 ? 1.5 : 1}" ${c && Math.abs(c) !== 50 ? 'stroke-dasharray="2 3"' : ''}/>`;
+      g += `<text x="${padL - 6}" y="${y(c) + 4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${c > 0 ? '+' + c : c === 0 ? '0' : '−' + (-c)}</text>`;
+    });
+    ns.forEach((n, i) => {
+      const x = padL + i * bw, cx = x + bw / 2, c = Math.max(-50, Math.min(50, n.cents));
+      const y0 = y(0), y1 = y(c), bh = Math.max(2, Math.abs(y1 - y0));
+      const selected = i === state.sel;
+      g += `<g class="bar" data-i="${i}" tabindex="0" role="button" aria-label="Note ${i + 1}, ${esc(C.noteName(n.n, flats))}, ${Math.round(n.cents)} cents">`;
+      g += `<rect x="${x}" y="${top}" width="${bw}" height="${h + bottomPad}" fill="${selected ? 'var(--accent-soft)' : 'transparent'}"/>`;
+      g += `<rect x="${cx - Math.min(7, bw * 0.32)}" y="${Math.min(y0, y1)}" width="${Math.min(14, bw * 0.64)}" height="${bh}" rx="2" fill="${colorFor(n.cents)}"/>`;
+      if (n.status === 'wrong') g += `<circle cx="${cx}" cy="${top + h + 26}" r="3" fill="var(--bad)"/>`;
+      if (n.shift) g += `<text x="${cx}" y="${top - 5}" text-anchor="middle" font-size="10" fill="var(--muted)">▾</text>`;
+      g += `<text x="${cx}" y="${top + h + 15}" text-anchor="middle" font-size="10.5" fill="${n.status === 'wrong' ? 'var(--bad)' : 'var(--ink)'}" font-weight="${selected ? 700 : 500}" font-family="Instrument Sans, system-ui, sans-serif">${esc(C.noteName(n.n, flats))}</text>`;
+      g += `</g>`;
+    });
+    g += `</svg>`;
+    box.innerHTML = g;
+    box.querySelectorAll('.bar').forEach(b => {
+      const i = +b.dataset.i;
+      b.addEventListener('click', () => selectNote(i, true));
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNote(i, true); } });
+    });
+  }
+
+  function noteDetail(i) {
+    const n = state.notes[i], flats = state.ex.flats;
+    const exp = n.status === 'wrong' ? ` · pattern needs ${C.noteName(n.expected, flats)}` : '';
+    const bits = [];
+    bits.push(`Settled at <b class="mono">${C.fmtC(n.cents)}</b>`);
+    if (Math.abs(n.landing - n.cents) > 8) bits.push(`arrived at <span class="mono">${C.fmtC(n.landing)}</span>`);
+    if (n.shift) bits.push('came after a shift');
+    if (C.fin(n.spanRes)) bits.push(Math.abs(n.spanRes) < 0.04 ? 'hand frame normal' : `hand frame ${Math.round(Math.abs(n.spanRes) * 100)}% ${n.spanRes < 0 ? 'narrower' : 'wider'} than usual here`);
+    if (C.fin(n.curl) && n.curl > 165) bits.push('fingers flattened');
+    if (n.ampCv > 0.35) bits.push('uneven bow sound');
+    return `<span class="eyebrow">Note ${i + 1} of ${state.notes.length}</span><span class="nm">${esc(C.noteName(n.n, flats, true))}${esc(exp)}</span><span class="muted">${bits.join(' · ')}</span>`;
+  }
+
+  function selectNote(i, seekTo) {
+    if (!state.notes.length) return;
+    state.sel = i;
+    $('noteDetail').innerHTML = noteDetail(i);
+    document.querySelectorAll('#chartBox .bar').forEach(b => {
+      const on = +b.dataset.i === i; b.firstElementChild.setAttribute('fill', on ? 'var(--accent-soft)' : 'transparent');
+      const t = b.querySelector('text:last-of-type'); if (t) t.setAttribute('font-weight', on ? 700 : 500);
+    });
+    document.querySelectorAll('.chip[data-i]').forEach(c => c.classList.toggle('on', +c.dataset.i === i));
+    if (seekTo && !state.example) { const n = state.notes[i]; vid.pause(); vid.currentTime = Math.max(0, n.t0 + (n.t1 - n.t0) * 0.4); }
+  }
+
+  function renderFindings() {
+    const flats = state.ex.flats;
+    $('findings').innerHTML = state.res.findings.map(f => `
+      <article class="find" style="--sevc:${sevColor(f.sev)}">
+        <div class="top"><span class="eyebrow">${esc(f.area)}</span><span class="pill">${sevLabel(f.sev)}</span></div>
+        <h3>${esc(f.title)}</h3>
+        <p>${esc(f.detail)}</p>
+        ${f.drill ? `<div class="drill"><b>Try this:</b> ${esc(f.drill)}</div>` : ''}
+        ${f.notes && f.notes.length ? `<div class="chips">${f.notes.slice(0, 12).map(i => `<button class="chip" data-i="${i}">${i + 1}·${esc(C.noteName(state.notes[i].n, flats))}</button>`).join('')}</div>` : ''}
+      </article>`).join('');
+    $('findings').querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+      selectNote(+c.dataset.i, true);
+      if (!state.example) $('stage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }));
+  }
+
+  // ---------- overlay ----------
+  const ovl = $('ovl'), ctx2 = ovl.getContext('2d');
+  const HAND = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+  const ARMS = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24]];
+  function frameAt(t) { const F = state.frames; if (!F.length) return null; let lo = 0, hi = F.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (F[m].t < t) lo = m + 1; else hi = m; } const b = F[lo], a = F[Math.max(0, lo - 1)]; return Math.abs(a.t - t) < Math.abs(b.t - t) ? a : b; }
+  function drawOverlay() {
+    const r = ovl.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (ovl.width !== Math.round(r.width * dpr)) { ovl.width = Math.round(r.width * dpr); ovl.height = Math.round(r.height * dpr); }
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0); ctx2.clearRect(0, 0, r.width, r.height);
+    if (!$('skel').checked || state.example) return;
+    const fr = frameAt(vid.currentTime); if (!fr) return;
+    const a = state.aspect; let w = r.width, h = w / a; if (h > r.height) { h = r.height; w = h * a; }
+    const ox = (r.width - w) / 2, oy = (r.height - h) / 2;
+    const P = p => [ox + (p.x / a) * w, oy + p.y * h];
+    const css = getComputedStyle(document.documentElement);
+    const lines = (pts, pairs, col, lw) => { ctx2.strokeStyle = col; ctx2.lineWidth = lw; ctx2.beginPath(); pairs.forEach(([i, j]) => { if (pts[i].v !== undefined && (pts[i].v < 0.4 || pts[j].v < 0.4)) return; const [x1, y1] = P(pts[i]), [x2, y2] = P(pts[j]); ctx2.moveTo(x1, y1); ctx2.lineTo(x2, y2); }); ctx2.stroke(); };
+    if (fr.pose) lines(fr.pose, ARMS, 'rgba(255,255,255,.75)', 2.5);
+    if (fr.rh) lines(fr.rh, HAND, 'rgba(255,255,255,.6)', 1.5);
+    if (fr.lh) {
+      lines(fr.lh, HAND, '#9AABFF', 2);
+      const [x1, y1] = P(fr.lh[8]), [x2, y2] = P(fr.lh[20]);
+      ctx2.strokeStyle = '#FFD166'; ctx2.lineWidth = 3; ctx2.setLineDash([5, 4]); ctx2.beginPath(); ctx2.moveTo(x1, y1); ctx2.lineTo(x2, y2); ctx2.stroke(); ctx2.setLineDash([]);
+      ctx2.fillStyle = '#FFD166'; [fr.lh[8], fr.lh[12], fr.lh[16], fr.lh[20]].forEach(p => { const [x, y] = P(p); ctx2.beginPath(); ctx2.arc(x, y, 3.5, 0, 7); ctx2.fill(); });
+    }
+  }
+  let raf = 0;
+  const loop = () => { drawOverlay(); if (!vid.paused) raf = requestAnimationFrame(loop); };
+  vid.addEventListener('play', () => { cancelAnimationFrame(raf); loop(); });
+  vid.addEventListener('seeked', drawOverlay);
+  vid.addEventListener('timeupdate', () => { if (vid.paused) drawOverlay(); });
+  $('skel').addEventListener('change', drawOverlay);
+  window.addEventListener('resize', () => { drawOverlay(); if (state.notes.length) drawChart(), selectNote(state.sel, false); });
+  let stopAt = null;
+  vid.addEventListener('timeupdate', () => { if (stopAt !== null && vid.currentTime >= stopAt) { vid.pause(); stopAt = null; } });
+  $('playNote').addEventListener('click', () => {
+    const n = state.notes[state.sel]; if (!n) return;
+    vid.muted = false; vid.currentTime = Math.max(0, n.t0 - 0.4); stopAt = n.t1 + 0.25; vid.play().catch(() => {});
+  });
+
+  // ---------- history ----------
+  const HK = 'basscoach.sessions';
+  const loadHist = () => { try { return JSON.parse(localStorage.getItem(HK) || '[]'); } catch (e) { return []; } };
+  function saveHistory(ex, s) {
+    const h = loadHist(); h.unshift({ d: Date.now(), ex: ex.label, pct: s.pct, c: s.correct, e: s.expected, sh: s.shifts, sok: s.shiftsOk });
+    try { localStorage.setItem(HK, JSON.stringify(h.slice(0, 40))); } catch (e) {}
+    renderHist();
+  }
+  function renderHist() {
+    const h = loadHist();
+    $('histEmpty').hidden = !!h.length; $('hist').hidden = !h.length;
+    $('hist').querySelector('tbody').innerHTML = h.slice(0, 12).map(r => `<tr><td>${new Date(r.d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td><td>${esc(r.ex)}</td><td>${r.pct}%</td><td>${r.e ? r.c + '/' + r.e : '–'}</td><td>${r.sh ? (r.sok ?? r.sh) + '/' + r.sh : '–'}</td></tr>`).join('');
+  }
+  renderHist();
+
+  // ---------- names (kept on this device) ----------
+  const DEFAULT_NAMES = { player: '', teacher: '' };
+  const NK = 'basscoach.names';
+  let names = DEFAULT_NAMES;
+  try { const s = JSON.parse(localStorage.getItem(NK) || 'null'); if (s) names = Object.assign({}, DEFAULT_NAMES, s); } catch (e) {}
+  const who = () => (names.player || '').trim();
+  const teacher = () => (names.teacher || '').trim();
+  const withName = s => who() ? `${s}, ${who()}` : s;
+  const styleTag = () => { $('styleTag').textContent = teacher() ? `In ${teacher()}'s style` : ''; };
+  $('nmPlayer').value = names.player || ''; $('nmTeacher').value = names.teacher || '';
+  ['nmPlayer', 'nmTeacher'].forEach(id => $(id).addEventListener('change', () => {
+    names = { player: $('nmPlayer').value, teacher: $('nmTeacher').value };
+    try { localStorage.setItem(NK, JSON.stringify(names)); } catch (e) {}
+    styleTag(); if (state.res) $('coachTxt').textContent = ruleNote();
+  }));
+  styleTag();
+
+
+  // Instant note from the findings, in her register; Claude's fuller note replaces it when available.
+  function ruleNote() {
+    const { res, notes, ex } = state; const s = res.summary; const F = res.findings; const flats = ex.flats;
+    const nm = i => `${C.noteName(notes[i].n, flats)} (note ${i + 1})`;
+    const list = idx => idx.slice(0, 3).map(nm).join(', ');
+    const has = id => F.find(f => f.id === id && f.sev > 0);
+    const good = [];
+    if (s.pct >= 80) good.push('Really nice tuning on this one, well done.');
+    else if (s.pct >= 60) good.push('Some good things happening with the tuning.');
+    if (s.expected && s.correct === s.expected) good.push('Every note in the right place, which is a great start.');
+    if (F.find(f => f.id === 'shift' && f.sev === 0) && s.shifts) good.push('Your shifts were landing nicely.');
+    if (F.find(f => f.id === 'frame' && f.sev === 0)) good.push('Lovely steady handshape.');
+    if (!good.length) good.push(withName('Good') + ', you got it recorded and played all the way through. Now let\'s use our ears.');
+    const fixes = [];
+    const fn = has('notes'); if (fn && fn.notes.length) { const i = fn.notes[0]; fixes.push(`First, a wrong note: ${nm(i)} should be ${C.noteName(notes[i].expected, flats)}. Think logically: what's in the key signature? Say the note names out loud before the bow moves.`); }
+    if (has('frame')) fixes.push(`Widen that handshape! It's closing up on the flat notes: ${list(has('frame').notes)}. That's the fourth finger creeping in towards the second. Put all four fingers down, check one to four against the open string, and remember half position is the widest handshape of all.`);
+    if (has('stretch')) fixes.push(`Higher up, your hand is stretching too far, so ${list(has('stretch').notes)} went sharp. Tones and semitones get smaller as you go up the bass.`);
+    const sh = has('shift');
+    if (sh) { const flatS = sh.detail.includes('land short'), sharpS = sh.detail.includes('overshoot'); fixes.push(`How far is the shift? Your shifts were missing: ${list(sh.notes)}. ${flatS ? 'They landed flat, so the shift was too small.' : sharpS ? 'They overshot, and remember, higher up the bass the shift is smaller than you think.' : ''} Before each one, say it out loud: tone or semitone? Then sing the note you're going to before you move.`.replace('  ', ' ')); }
+    if (has('landing')) fixes.push(`You're arriving out of tune and then sliding to fix it. Sing the landing note first so your ears know where you're going.`);
+    const tn = F.find(f => f.id === 'tune');
+    if (!fixes.length && tn && tn.sev > 0) { const lean = s.tendency < -6 ? 'Quite a few notes were flat' : s.tendency > 6 ? 'Quite a few notes were sharp' : 'A few notes wandered'; fixes.push(`${lean}: ${list(tn.notes)}. Use your ears. Stop, freeze on the note, sing it, correct it, then play on.`); }
+    if (has('curl')) fixes.push(`Curved fingers, please. They went flat on ${has('curl').notes.length} notes. Click and flicks every day, and check in the mirror.`);
+    if (has('bowarm') || has('tone')) fixes.push(`Relax that elbow and keep the bow in the string, so the sound doesn't wobble. And pinky over the bow!`);
+    if (has('shoulders')) fixes.push(`Your shoulders crept up as you went higher. Sit centred, let them drop.`);
+    if (has('camera')) fixes.push(`The camera couldn't see your left hand well, so set the phone up front-left with more light on the fingerboard next time.`);
+    const worst = (tn && tn.notes.length ? tn.notes : []).slice(0, 3).map(nm).join(', ');
+    const plan = [
+      'Warm up: thumb exercise and click and flicks, quality not speed.',
+      has('frame') ? 'Open 1-2-4 up the positions, singing along, with a big handshape.' : sh ? 'Shift slowly between the notes that missed, naming tone or semitone each time.' : 'Play the scale slowly with a drone, stopping on every note until it rings.',
+      worst ? `Stop and check on ${worst}: sing it, play it, correct it.` : 'Play it through at exam tempo without stopping.',
+      'Then once more, until it can\'t go wrong.'
+    ];
+    return `${good.slice(0, 2).join(' ')}\n\n${fixes.slice(0, 2).join('\n\n') || 'Not much to fix here. Keep it this clean at full tempo.'}\n\nFor tomorrow:\n${plan.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${withName('You have a really good set of ears')}, so use them!`;
+  }
+
+  let sampleFn = null, sampleReady = Promise.resolve();
+  let noteRun = 0;
+  async function showNote() {
+    const run = ++noteRun;
+    $('coachTxt').textContent = ruleNote();
+    $('coachStatus').textContent = state.example ? 'Example note for the made-up session above.' : '';
+    if (state.example) return;
+  }
+
+  // ---------- in-app recorder (hosted version only) ----------
+  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  $('recBtn').addEventListener('click', () => { if (canRecord) openRec(); else $('recIn').click(); });
+  const REC = { phase: 'idle', stream: null, ctx: null, an: null, sp: null, rec: null, chunks: [], pcm: [], on: false, t0: 0, raf: 0, wake: null, noise: 0.002, noiseAcc: [], ex: null, mime: '' };
+  const live = {};
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const pcOf = m => ((m % 12) + 12) % 12;
+  const centClass = c => Math.abs(c) <= 15 ? 'g' : Math.abs(c) <= 30 ? 'w' : 'b';
+  function resetLive() { Object.assign(live, { cand: null, candN: 0, cents: [], last: -1, lastSound: 0, idx: 0, count: 0, heard: [], tLast: 0, buf: null }); }
+  function buildStrip() {
+    const ex = REC.ex, el = $('recStrip'); el.innerHTML = '';
+    if (!ex.notes) return;
+    ex.notes.forEach((n, i) => { const c = document.createElement('i'); c.textContent = C.noteName(n, ex.flats); if (i === 0) c.className = 'next'; el.appendChild(c); });
+  }
+  function markStrip(i, c) {
+    const chips = $('recStrip').children; if (!chips[i]) return;
+    chips[i].className = centClass(c); if (chips[i + 1]) chips[i + 1].className = 'next';
+  }
+  function freeStrip(m, c) {
+    const el = $('recStrip'); const x = document.createElement('i'); x.textContent = C.noteName(m, REC.ex.flats); x.className = centClass(c); el.appendChild(x);
+    while (el.children.length > 18) el.removeChild(el.firstChild);
+  }
+  function beep(freq) {
+    try { const o = REC.ctx.createOscillator(), g = REC.ctx.createGain(); o.frequency.value = freq; g.gain.setValueAtTime(0.0001, REC.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.25, REC.ctx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, REC.ctx.currentTime + 0.15); o.connect(g); g.connect(REC.ctx.destination); o.start(); o.stop(REC.ctx.currentTime + 0.17); } catch (e) {}
+  }
+  function recMsg(t) { $('recMsg').textContent = t || ''; $('recMsg').hidden = !t; }
+
+  async function openRec() {
+    REC.ex = currentEx(); resetLive();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    REC.ctx = new AC();
+    try { REC.ctx.resume(); } catch (e) {}
+    $('recView').hidden = false; document.documentElement.style.overflow = 'hidden';
+    $('recExName').textContent = REC.ex.label; $('recTime').textContent = '0:00'; $('recTime').classList.remove('live');
+    $('recGo').disabled = true; $('recGo').classList.remove('on'); $('recHint').textContent = 'Tap to start. It stops by itself when the exercise is done.';
+    recMsg(''); buildStrip(); REC.phase = 'opening';
+    try {
+      REC.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 }
+      });
+    } catch (e) {
+      closeRec();
+      showErr(e && e.name === 'NotAllowedError' ? 'Camera or microphone access was refused. On the iPhone: Settings › Safari › Camera and Microphone, set to Ask or Allow, then reload this page.' : 'The camera could not start: ' + (e && e.message ? e.message : e));
+      return;
+    }
+    if (REC.phase !== 'opening') { REC.stream.getTracks().forEach(t => t.stop()); return; }
+    const v = $('recVid'); v.srcObject = REC.stream; try { await v.play(); } catch (e) {}
+    const vs = REC.stream.getVideoTracks()[0].getSettings ? REC.stream.getVideoTracks()[0].getSettings() : {};
+    $('recMeta').textContent = `${vs.width || '?'}×${vs.height || '?'} · ${Math.round(vs.frameRate || 30)} fps · mic processing off`;
+    const src = REC.ctx.createMediaStreamSource(REC.stream);
+    REC.an = REC.ctx.createAnalyser(); REC.an.fftSize = 4096; src.connect(REC.an);
+    REC.sp = REC.ctx.createScriptProcessor(4096, 1, 1);
+    REC.sp.onaudioprocess = e => { if (REC.on) REC.pcm.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    const mute = REC.ctx.createGain(); mute.gain.value = 0; src.connect(REC.sp); REC.sp.connect(mute); mute.connect(REC.ctx.destination);
+    try { if (navigator.wakeLock) REC.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    REC.phase = 'ready'; $('recGo').disabled = false; $('recGo').focus();
+    cancelAnimationFrame(REC.raf); REC.raf = requestAnimationFrame(loopLive);
+  }
+
+  function liveFrame() {
+    if (!REC.an) return null;
+    if (!live.buf) live.buf = new Float32Array(REC.an.fftSize);
+    REC.an.getFloatTimeDomainData(live.buf);
+    const b = live.buf, ds = Math.max(1, Math.round(REC.ctx.sampleRate / 12000)), n = Math.floor(b.length / ds), x = new Float32Array(n);
+    let e = 0; for (let i = 0; i < n; i++) { let s = 0; for (let k = 0; k < ds; k++) s += b[i * ds + k]; x[i] = s / ds; e += x[i] * x[i]; }
+    const rms = Math.sqrt(e / n), sr = REC.ctx.sampleRate / ds;
+    const gate = Math.max(REC.noise * 3, 0.003);
+    let midi = null, cents = 0, m = null;
+    if (rms > gate) {
+      const tMax = Math.ceil(sr / 36);
+      const tr = C.yinTrack(x, sr, { win: Math.min(700, n - tMax - 2), hop: n, thr: 0.12 });
+      const f = tr.length ? tr[0].f : 0;
+      if (f > 0) { m = C.hzToMidi(f); midi = Math.round(m); cents = (m - midi) * 100; }
+    }
+    return { rms, midi, cents, sounding: rms > gate };
+  }
+
+  function drawTuner(r) {
+    const nd = $('tnNeedle');
+    if (r && r.midi !== null) {
+      $('tnNote').textContent = C.noteName(r.midi, REC.ex.flats);
+      const c = Math.max(-50, Math.min(50, r.cents));
+      nd.style.left = (50 + c) + '%'; nd.style.opacity = 1;
+      $('tnCents').textContent = Math.abs(c) <= 5 ? 'in tune' : `${Math.round(Math.abs(c))} cents ${c < 0 ? 'flat' : 'sharp'}`;
+    } else { nd.style.opacity = 0; $('tnNote').textContent = '–'; $('tnCents').textContent = REC.phase === 'rec' ? 'listening' : 'Play a note to check the sound'; }
+  }
+
+  function registerNote(m, c) {
+    live.count++;
+    const ex = REC.ex;
+    if (ex.notes) {
+      for (let k = 0; k < 3 && live.idx + k < ex.notes.length; k++) {
+        if (pcOf(ex.notes[live.idx + k]) === pcOf(m)) { for (let j = 0; j < k; j++) markStrip(live.idx + j, 99); markStrip(live.idx + k, c); live.idx += k + 1; break; }
+      }
+    } else freeStrip(m, c);
+  }
+
+  function loopLive() {
+    REC.raf = requestAnimationFrame(loopLive);
+    const now = performance.now(); if (now - live.tLast < 45) return; live.tLast = now;
+    const r = liveFrame(); if (!r) return;
+    if (REC.phase === 'count') REC.noiseAcc.push(r.rms);
+    drawTuner(r);
+    if (REC.phase !== 'rec') return;
+    if (r.sounding) live.lastSound = now;
+    if (r.midi !== null) {
+      if (live.cand === r.midi) { live.candN++; live.cents.push(r.cents); }
+      else { live.cand = r.midi; live.candN = 1; live.cents = [r.cents]; }
+      if (live.candN === 3 && live.cand !== live.last) { registerNote(live.cand, C.median(live.cents)); live.last = live.cand; }
+    } else if (!r.sounding) { if (now - live.lastSound > 220) live.last = -1; live.cand = null; live.candN = 0; }
+    const el = (now - REC.t0) / 1000; $('recTime').textContent = mmss(el);
+    const quiet = now - live.lastSound, ex = REC.ex;
+    if (ex.notes && live.idx >= ex.notes.length && quiet > 900) return stopRec();
+    if (live.count >= 3 && quiet > (ex.notes ? 3000 : 4500)) return stopRec();
+    if (el > 240) return stopRec();
+  }
+
+  $('recGo').addEventListener('click', async () => {
+    if (REC.phase === 'ready') {
+      REC.phase = 'count'; REC.noiseAcc = []; $('recGo').disabled = true; recMsg('');
+      for (const n of [3, 2, 1]) { $('recCount').hidden = false; $('recCount').textContent = n; beep(n === 1 ? 880 : 660); await sleep(1000); if (REC.phase !== 'count') return; }
+      $('recCount').hidden = true;
+      const q = REC.noiseAcc.slice().sort((a, b) => a - b); REC.noise = q.length ? q[Math.floor(q.length * 0.3)] : 0.002;
+      startRecording();
+    } else if (REC.phase === 'rec') stopRec();
+  });
+
+  function startRecording() {
+    const types = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    REC.mime = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    try { REC.rec = new MediaRecorder(REC.stream, REC.mime ? { mimeType: REC.mime, videoBitsPerSecond: 6000000 } : undefined); }
+    catch (e) { REC.rec = new MediaRecorder(REC.stream); }
+    REC.chunks = []; REC.pcm = [];
+    REC.rec.ondataavailable = e => { if (e.data && e.data.size) REC.chunks.push(e.data); };
+    REC.rec.start(1000); REC.on = true; REC.t0 = performance.now(); live.lastSound = REC.t0; REC.phase = 'rec';
+    $('recGo').disabled = false; $('recGo').classList.add('on'); $('recGo').setAttribute('aria-label', 'Stop recording');
+    $('recTime').classList.add('live'); $('recHint').textContent = 'Recording. Tap to stop early.';
+    $('recView').classList.add('recording');
+  }
+
+  async function stopRec() {
+    if (REC.phase !== 'rec') return;
+    REC.phase = 'stopping'; REC.on = false; $('recGo').disabled = true; recMsg('Saving the recording…');
+    const dur = (performance.now() - REC.t0) / 1000;
+    const blob = await new Promise(res => { REC.rec.onstop = () => res(new Blob(REC.chunks, { type: REC.rec.mimeType || REC.mime || 'video/mp4' })); try { REC.rec.stop(); } catch (e) { res(new Blob(REC.chunks)); } });
+    let total = 0; REC.pcm.forEach(a => total += a.length);
+    const pcm = new Float32Array(total); let o = 0; REC.pcm.forEach(a => { pcm.set(a, o); o += a.length; });
+    let audio = null;
+    try {
+      const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const tmp = new OAC(1, Math.max(1, pcm.length), REC.ctx.sampleRate);
+      const ab = tmp.createBuffer(1, Math.max(1, pcm.length), REC.ctx.sampleRate);
+      if (ab.copyToChannel) ab.copyToChannel(pcm, 0); else ab.getChannelData(0).set(pcm);
+      audio = await resampleBuffer(ab);
+    } catch (e) { console.error(e); }
+    closeRec();
+    const ext = (blob.type || '').includes('webm') ? 'webm' : 'mp4';
+    const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`;
+    const file = new File([blob], `Bass ${stamp}.${ext}`, { type: blob.type || 'video/mp4' });
+    Object.assign(state, { file, pcm: audio, recorded: true, recDur: dur });
+    $('fname').textContent = `Recorded ${mmss(dur)} · ${(file.size / 1048576).toFixed(0)} MB`;
+    $('goBtn').disabled = false;
+    runAnalysis();
+  }
+
+  function closeRec() {
+    cancelAnimationFrame(REC.raf);
+    if (REC.phase === 'rec' && REC.rec) { REC.on = false; try { REC.rec.stop(); } catch (e) {} }
+    REC.phase = 'idle';
+    if (REC.stream) REC.stream.getTracks().forEach(t => t.stop());
+    try { if (REC.sp) REC.sp.disconnect(); } catch (e) {}
+    try { if (REC.ctx) REC.ctx.close(); } catch (e) {}
+    try { if (REC.wake) REC.wake.release(); } catch (e) {}
+    Object.assign(REC, { stream: null, an: null, sp: null, wake: null });
+    $('recVid').srcObject = null; $('recCount').hidden = true; recMsg('');
+    $('recView').classList.remove('recording');
+    $('recView').hidden = true; document.documentElement.style.overflow = '';
+  }
+  $('recClose').addEventListener('click', closeRec);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('recView').hidden) closeRec(); });
+
+  $('saveVid').addEventListener('click', async () => {
+    const f = state.file; if (!f) return;
+    try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: f.name }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ---------- example session (made-up numbers) ----------
+  function exampleSession() {
+    const ex = Object.assign(C.build({ key: 10, type: 'major', range: 19 }), { label: 'Grade 5: B♭ major scale, to the 12th' });
+    const cents = [-4, 6, -22, 3, 8, -31, 2, -6, 12, -26, 18, 5, -3, -24, 7, -2, 9, -33, 4, 11, -5, 1, 4];
+    const shiftAt = new Set([3, 6, 9, 13, 17, 20]);
+    const notes = ex.notes.map((n, i) => {
+      const ly = 1.2 + 0.08 * Math.min(i, 22 - i);
+      const span = (1.05 - 0.05 * (ly - 1.2)) * (cents[i] < -20 ? 0.86 : 1);
+      return { n, t0: i * 0.7, t1: i * 0.7 + 0.6, cents: cents[i], landing: shiftAt.has(i) && cents[i] < -20 ? cents[i] - 18 : cents[i], wobble: 4, ampCv: i === 10 || i === 18 || i === 5 ? 0.42 : 0.18,
+        span, ly, lx: 0.6, curl: i % 5 === 0 ? 168 : 150, elbow: 110 + (i % 3) * 6, elbowLift: 0.2, neck: 0.55 - i * 0.004, shift: shiftAt.has(i), move: shiftAt.has(i) ? 0.3 : 0.03 };
+    });
+    // span residual as the engine computes it
+    const mx = C.mean(notes.map(n => n.ly)), my = C.mean(notes.map(n => n.span));
+    const sxx = notes.reduce((s, n) => s + (n.ly - mx) ** 2, 0), sxy = notes.reduce((s, n) => s + (n.ly - mx) * (n.span - my), 0), k = sxy / sxx;
+    notes.forEach(n => { n.spanRes = (n.span - (my + k * (n.ly - mx))) / my; });
+    const res = C.analyse(notes, ex);
+    Object.assign(state, { ex, notes, frames: [], res, example: true, sel: -1 });
+    render();
+  }
+  exampleSession();
+})();
+</script>
+
+</body>
+</html>

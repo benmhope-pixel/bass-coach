@@ -1,0 +1,24 @@
+{
+  "name": "Bass Coach",
+  "short_name": "Bass Coach",
+  "description": "Records a double bass scale and coaches tuning, hand frame, shifts and bow arm.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EEF0EC",
+  "theme_color": "#2A3B8F",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
