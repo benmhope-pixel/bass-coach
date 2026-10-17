@@ -156,6 +156,11 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 
 .rec.recording .guide{border-color:rgba(255,255,255,.18)}
 .rec.recording .guide span{display:none}
+.rec-check{display:flex;flex-direction:column;gap:4px;align-items:center}
+.rec-check span{font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.75)}
+.rec-check span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#C9861C;margin-right:6px;vertical-align:1px}
+.rec-check span.ok{color:#fff}.rec-check span.ok::before{background:#2E9E62}
+.rec.recording .rec-check{display:none}
 
 </style>
 
@@ -289,7 +294,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
   <div class="rec-strip" id="recStrip" aria-hidden="true"></div>
   <div class="rec-count" id="recCount" hidden></div>
   <div class="tuner" aria-live="off"><span class="tn" id="tnNote">–</span><div class="tbar"><i id="tnNeedle"></i></div><span class="tc mono" id="tnCents">Play a note to check the sound</span></div>
-  <div class="rec-ctl"><button class="recbig" id="recGo" aria-label="Start recording" disabled><i></i></button><span id="recHint">Tap to start. It stops by itself when the exercise is done.</span></div>
+  <div class="rec-ctl"><div class="rec-check"><span id="ckHand">Left hand</span><span id="ckBody">Bow arm</span></div><button class="recbig" id="recGo" aria-label="Start recording" disabled><i></i></button><span id="recHint">Tap to start. It stops by itself when the exercise is done.</span></div>
   <div class="rec-msg" id="recMsg" hidden></div>
 </div>
 
@@ -726,7 +731,7 @@ const Core = (() => {
   // ---------- file ----------
   const fileIn = $('fileIn');
   const onPick = inp => () => {
-    const f = inp.files && inp.files[0]; state.file = f || null; state.pcm = null; state.recorded = false;
+    const f = inp.files && inp.files[0]; state.file = f || null; state.pcm = null; state.recorded = false; state.liveFrames = null;
     $('fname').textContent = f ? `${f.name} · ${(f.size / 1048576).toFixed(0)} MB` : 'No clip chosen';
     $('goBtn').disabled = !f; $('errTxt').hidden = true;
     if (f && inp.id === 'recIn') $('goBtn').click();
@@ -751,9 +756,11 @@ const Core = (() => {
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     let pRes = null; pose.onResults(r => { pRes = r; });
     await pose.initialize();
+    let chain = Promise.resolve();
+    const lock = f => { const r = chain.then(f, f); chain = r.catch(() => {}); return r; };
     models = {
-      async hands(img) { hRes = null; await hands.send({ image: img }); return hRes; },
-      async pose(img) { pRes = null; await pose.send({ image: img }); return pRes; }
+      hands: img => lock(async () => { hRes = null; await hands.send({ image: img }); return hRes; }),
+      pose: img => lock(async () => { pRes = null; await pose.send({ image: img }); return pRes; })
     };
     return models;
   }
@@ -797,6 +804,19 @@ const Core = (() => {
   });
   const scale = (pts, a) => pts.map(p => ({ x: p.x * a, y: p.y, z: (p.z || 0) * a, v: p.visibility }));
 
+  function buildFrame(t, hr, pr, a) {
+    const fr = { t, lh: null, rh: null, pose: null };
+    if (pr && pr.poseLandmarks) fr.pose = scale(pr.poseLandmarks, a);
+    const hs = (hr && hr.multiHandLandmarks) || [];
+    hs.forEach((h, i) => {
+      const pts = scale(h, a); let left;
+      if (fr.pose) { const P = fr.pose, w = pts[0]; left = Math.hypot(w.x - P[15].x, w.y - P[15].y) < Math.hypot(w.x - P[16].x, w.y - P[16].y); }
+      else { const lab = hr.multiHandedness && hr.multiHandedness[i] && hr.multiHandedness[i].label; left = lab === 'Right'; }
+      if (left && !fr.lh) fr.lh = pts; else if (!left && !fr.rh) fr.rh = pts;
+    });
+    return fr;
+  }
+
   async function trackVideo(fps, onP) {
     const m = await loadModels();
     const a = vid.videoWidth / vid.videoHeight || 16 / 9; state.aspect = a;
@@ -804,16 +824,7 @@ const Core = (() => {
     for (let t = Math.min(0.05, dur / 2); t < dur; t += step) {
       await seek(t);
       const hr = await m.hands(vid), pr = await m.pose(vid);
-      const fr = { t, lh: null, rh: null, pose: null };
-      if (pr && pr.poseLandmarks) fr.pose = scale(pr.poseLandmarks, a);
-      const hs = (hr && hr.multiHandLandmarks) || [];
-      hs.forEach((h, i) => {
-        const pts = scale(h, a); let left;
-        if (fr.pose) { const P = fr.pose, w = pts[0]; left = Math.hypot(w.x - P[15].x, w.y - P[15].y) < Math.hypot(w.x - P[16].x, w.y - P[16].y); }
-        else { const lab = hr.multiHandedness && hr.multiHandedness[i] && hr.multiHandedness[i].label; left = lab === 'Right'; }
-        if (left && !fr.lh) fr.lh = pts; else if (!left && !fr.rh) fr.rh = pts;
-      });
-      frames.push(fr);
+      frames.push(buildFrame(t, hr, pr, a));
       const done = t / dur, el = (performance.now() - t0) / 1000;
       const eta = done > 0.05 ? Math.round(el / done - el) : null;
       onP(done, `Tracking hands and arms · ${Math.round(done * 100)}%${eta !== null ? ` · about ${eta < 60 ? eta + ' s' : Math.ceil(eta / 60) + ' min'} left` : ''}`);
@@ -823,6 +834,18 @@ const Core = (() => {
 
   // ---------- run ----------
   $('goBtn').addEventListener('click', () => runAnalysis());
+  function openVideo(ms) {
+    return new Promise(res => {
+      let done = false;
+      const fin = ok => { if (done) return; done = true; ['loadeddata', 'canplay', 'error'].forEach(ev => vid.removeEventListener(ev, h[ev])); res(ok); };
+      const h = { loadeddata: () => fin(true), canplay: () => fin(true), error: () => fin(false) };
+      ['loadeddata', 'canplay', 'error'].forEach(ev => vid.addEventListener(ev, h[ev]));
+      try { vid.load(); } catch (e) {}
+      const pp = vid.play(); if (pp && pp.then) pp.then(() => { vid.pause(); fin(true); }, () => {});
+      if (vid.readyState >= 2) fin(true);
+      setTimeout(() => fin(vid.readyState >= 1), ms);
+    });
+  }
   async function ensureDuration() {
     if (isFinite(vid.duration) && vid.duration > 0) return;
     await new Promise(res => { const done = () => { vid.removeEventListener('durationchange', done); res(); }; vid.addEventListener('durationchange', done); vid.currentTime = 1e7; setTimeout(done, 3000); });
@@ -837,9 +860,10 @@ const Core = (() => {
       prog(0.02, 'Opening the clip');
       const url = URL.createObjectURL(f);
       vid.hidden = false; $('stageEmpty').hidden = true; vid.muted = true; vid.src = url;
-      await new Promise((res, rej) => { vid.onloadeddata = res; vid.onerror = () => rej(new Error('This video format will not open here. Record with the iPhone Camera app and try again.')); });
-      try { await vid.play(); vid.pause(); } catch (e) {}
-      await ensureDuration();
+      const opened = await openVideo(8000);
+      const liveF = state.liveFrames && state.liveFrames.length >= 5 && state.liveFrames.length / Math.max(1, state.recDur || 1) >= 2.5 ? state.liveFrames : null;
+      if (!opened && !liveF && !(state.liveFrames && state.liveFrames.length)) throw new Error('This video would not open on this phone. Try recording again, or use the iPhone Camera app and Choose a clip.');
+      if (opened) await ensureDuration();
       prog(0.05, 'Listening to the notes');
       let audio = state.pcm;
       if (!audio) { try { audio = await readAudio(f); } catch (e) { throw new Error('Could not read the sound from this clip. Record it again, or use the iPhone Camera app in Video mode.'); } }
@@ -848,7 +872,7 @@ const Core = (() => {
       if (notes.length < 3) throw new Error('Only ' + notes.length + ' clear notes were heard. Move the phone closer or play with a fuller sound.');
       prog(0.1, 'Loading the hand and pose models (first time takes a while)');
       const fps = +$('fpsSel').value;
-      const frames = await trackVideo(fps, (p, txt) => prog(0.1 + 0.85 * p, txt));
+      const frames = liveF || (opened ? await trackVideo(fps, (p, txt) => prog(0.1 + 0.85 * p, txt)) : (state.liveFrames || []));
       prog(0.97, 'Building the report');
       C.fuse(notes, frames);
       const res = C.analyse(notes, ex.notes ? ex : null);
@@ -1087,13 +1111,17 @@ const Core = (() => {
   // ---------- in-app recorder (hosted version only) ----------
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
   $('recBtn').addEventListener('click', () => { if (canRecord) openRec(); else $('recIn').click(); });
-  const REC = { phase: 'idle', stream: null, ctx: null, an: null, sp: null, rec: null, chunks: [], pcm: [], on: false, t0: 0, raf: 0, wake: null, noise: 0.002, noiseAcc: [], ex: null, mime: '' };
+  const REC = { phase: 'idle', stream: null, ctx: null, an: null, sp: null, cap: null, rec: null, chunks: [], pcm: [], frames: [], on: false, t0: 0, raf: 0, wake: null, noise: 0.002, noiseAcc: [], ex: null, mime: '', tracking: false, tracker: false };
+  // Captures raw microphone samples on the audio thread, so heavy work on the page never drops sound.
+  const CAPTURE_WORKLET = `class Cap extends AudioWorkletProcessor{constructor(){super();this.on=false;this.b=new Float32Array(2048);this.n=0;this.port.onmessage=e=>{if(this.n){this.port.postMessage({d:this.b.slice(0,this.n),r:this.on});this.n=0;}this.on=e.data;};}
+process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[this.n++]=c[i];if(this.n===this.b.length){this.port.postMessage({d:this.b.slice(0),r:this.on});this.n=0;}}}return true;}}registerProcessor('cap',Cap);`;
+  function setCapture(on) { REC.on = on; if (REC.cap) REC.cap.port.postMessage(on); }
   const live = {};
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   const pcOf = m => ((m % 12) + 12) % 12;
   const centClass = c => Math.abs(c) <= 15 ? 'g' : Math.abs(c) <= 30 ? 'w' : 'b';
-  function resetLive() { Object.assign(live, { cand: null, candN: 0, cents: [], last: -1, lastSound: 0, idx: 0, count: 0, heard: [], tLast: 0, buf: null }); }
+  function resetLive() { Object.assign(live, { cand: null, candN: 0, cents: [], last: -1, idx: 0, count: 0, tLast: 0, win: null, aT: 0, latest: null, recT0: undefined, lastSoundT: 0 }); }
   function buildStrip() {
     const ex = REC.ex, el = $('recStrip'); el.innerHTML = '';
     if (!ex.notes) return;
@@ -1137,30 +1165,89 @@ const Core = (() => {
     $('recMeta').textContent = `${vs.width || '?'}×${vs.height || '?'} · ${Math.round(vs.frameRate || 30)} fps · mic processing off`;
     const src = REC.ctx.createMediaStreamSource(REC.stream);
     REC.an = REC.ctx.createAnalyser(); REC.an.fftSize = 4096; src.connect(REC.an);
-    REC.sp = REC.ctx.createScriptProcessor(4096, 1, 1);
-    REC.sp.onaudioprocess = e => { if (REC.on) REC.pcm.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
-    const mute = REC.ctx.createGain(); mute.gain.value = 0; src.connect(REC.sp); REC.sp.connect(mute); mute.connect(REC.ctx.destination);
+    const mute = REC.ctx.createGain(); mute.gain.value = 0; mute.connect(REC.ctx.destination);
+    try {
+      const url = URL.createObjectURL(new Blob([CAPTURE_WORKLET], { type: 'application/javascript' }));
+      await REC.ctx.audioWorklet.addModule(url);
+      REC.cap = new AudioWorkletNode(REC.ctx, 'cap', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      REC.cap.port.onmessage = e => { if (e.data.r) REC.pcm.push(e.data.d); liveChunk(e.data.d); };
+      src.connect(REC.cap); REC.cap.connect(mute);
+    } catch (e) {
+      REC.cap = null;
+      REC.sp = REC.ctx.createScriptProcessor(4096, 1, 1);
+      REC.sp.onaudioprocess = ev => { const d = new Float32Array(ev.inputBuffer.getChannelData(0)); if (REC.on) REC.pcm.push(d); liveChunk(d); };
+      src.connect(REC.sp); REC.sp.connect(mute);
+    }
     try { if (navigator.wakeLock) REC.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
     REC.phase = 'ready'; $('recGo').disabled = false; $('recGo').focus();
     cancelAnimationFrame(REC.raf); REC.raf = requestAnimationFrame(loopLive);
+    if (location.hash !== '#notrack') trackLoop(vs);
   }
 
-  function liveFrame() {
-    if (!REC.an) return null;
-    if (!live.buf) live.buf = new Float32Array(REC.an.fftSize);
-    REC.an.getFloatTimeDomainData(live.buf);
-    const b = live.buf, ds = Math.max(1, Math.round(REC.ctx.sampleRate / 12000)), n = Math.floor(b.length / ds), x = new Float32Array(n);
+  // Hand and pose tracking on the live camera: checks framing before, records landmarks during.
+  async function trackLoop(vs) {
+    if (REC.tracking) return; REC.tracking = true; REC.tracker = false;
+    const meta = $('recMeta').textContent;
+    let m = null;
+    try { $('recMeta').textContent = meta + ' · loading tracking'; m = await loadModels(); REC.tracker = true; $('recMeta').textContent = meta; }
+    catch (e) { console.error(e); $('recMeta').textContent = meta + ' · tracking unavailable'; REC.tracking = false; return; }
+    const v = $('recVid');
+    while (REC.phase === 'ready' || REC.phase === 'count' || REC.phase === 'rec') {
+      const t0 = performance.now();
+      if (v.readyState >= 2 && v.videoWidth) {
+        const a = v.videoWidth / v.videoHeight;
+        const tRel = (t0 - REC.t0) / 1000;
+        let hr = null, pr = null;
+        try { hr = await m.hands(v); pr = await m.pose(v); } catch (e) { console.error(e); }
+        const fr = buildFrame(tRel, hr, pr, a);
+        $('ckHand').classList.toggle('ok', !!fr.lh); $('ckBody').classList.toggle('ok', !!(fr.pose && fr.pose[14] && fr.pose[14].v > 0.5 && fr.pose[16] && fr.pose[16].v > 0.5));
+        if (REC.phase === 'rec' && REC.on) { REC.frames.push(fr); state.aspect = a; }
+      }
+      const took = performance.now() - t0;
+      const gap = Math.max(REC.phase === 'rec' ? 125 : 350, took * 1.5);
+      await sleep(Math.max(15, gap - took));
+    }
+    REC.tracking = false;
+  }
+
+  function pitchOf(b, srIn) {
+    const ds = Math.max(1, Math.round(srIn / 12000)), n = Math.floor(b.length / ds), x = new Float32Array(n);
     let e = 0; for (let i = 0; i < n; i++) { let s = 0; for (let k = 0; k < ds; k++) s += b[i * ds + k]; x[i] = s / ds; e += x[i] * x[i]; }
-    const rms = Math.sqrt(e / n), sr = REC.ctx.sampleRate / ds;
+    const rms = Math.sqrt(e / n), sr = srIn / ds;
     const gate = Math.max(REC.noise * 3, 0.003);
-    let midi = null, cents = 0, m = null;
+    let midi = null, cents = 0;
     if (rms > gate) {
       const tMax = Math.ceil(sr / 36);
       const tr = C.yinTrack(x, sr, { win: Math.min(700, n - tMax - 2), hop: n, thr: 0.12 });
       const f = tr.length ? tr[0].f : 0;
-      if (f > 0) { m = C.hzToMidi(f); midi = Math.round(m); cents = (m - midi) * 100; }
+      if (f > 0) { const m = C.hzToMidi(f); midi = Math.round(m); cents = (m - midi) * 100; }
     }
     return { rms, midi, cents, sounding: rms > gate };
+  }
+
+  // Called for every ~40 ms of microphone audio, in order, even if the page was busy for a moment.
+  function liveChunk(d) {
+    if (!REC.ctx || REC.phase === 'idle') return;
+    const sr = REC.ctx.sampleRate;
+    if (!live.win) { live.win = new Float32Array(4096); live.aT = 0; }
+    const w = live.win;
+    if (d.length >= w.length) w.set(d.subarray(d.length - w.length)); else { w.copyWithin(0, d.length); w.set(d, w.length - d.length); }
+    live.aT += d.length / sr;
+    const r = pitchOf(w, sr); live.latest = r;
+    if (REC.phase === 'count') REC.noiseAcc.push(r.rms);
+    if (REC.phase !== 'rec' || !REC.on) return;
+    if (live.recT0 === undefined) { live.recT0 = live.aT; live.lastSoundT = live.aT; }
+    if (r.sounding) live.lastSoundT = live.aT;
+    if (r.midi !== null) {
+      if (live.cand === r.midi) { live.candN++; live.cents.push(r.cents); }
+      else { live.cand = r.midi; live.candN = 1; live.cents = [r.cents]; }
+      if (live.candN === 3 && live.cand !== live.last) { registerNote(live.cand, C.median(live.cents)); live.last = live.cand; }
+    } else if (!r.sounding) { if (live.aT - live.lastSoundT > 0.22) live.last = -1; live.cand = null; live.candN = 0; }
+    const el = live.aT - live.recT0, quiet = live.aT - live.lastSoundT, ex = REC.ex;
+    if (ex.notes && live.idx >= ex.notes.length && quiet > 0.9) return stopRec();
+    const most = !ex.notes || live.idx >= Math.ceil(ex.notes.length * 0.7);
+    if (live.count >= 3 && quiet > (most ? (ex.notes ? 3 : 4.5) : 7)) return stopRec();
+    if (el > 240) return stopRec();
   }
 
   function drawTuner(r) {
@@ -1186,21 +1273,8 @@ const Core = (() => {
   function loopLive() {
     REC.raf = requestAnimationFrame(loopLive);
     const now = performance.now(); if (now - live.tLast < 45) return; live.tLast = now;
-    const r = liveFrame(); if (!r) return;
-    if (REC.phase === 'count') REC.noiseAcc.push(r.rms);
-    drawTuner(r);
-    if (REC.phase !== 'rec') return;
-    if (r.sounding) live.lastSound = now;
-    if (r.midi !== null) {
-      if (live.cand === r.midi) { live.candN++; live.cents.push(r.cents); }
-      else { live.cand = r.midi; live.candN = 1; live.cents = [r.cents]; }
-      if (live.candN === 3 && live.cand !== live.last) { registerNote(live.cand, C.median(live.cents)); live.last = live.cand; }
-    } else if (!r.sounding) { if (now - live.lastSound > 220) live.last = -1; live.cand = null; live.candN = 0; }
-    const el = (now - REC.t0) / 1000; $('recTime').textContent = mmss(el);
-    const quiet = now - live.lastSound, ex = REC.ex;
-    if (ex.notes && live.idx >= ex.notes.length && quiet > 900) return stopRec();
-    if (live.count >= 3 && quiet > (ex.notes ? 3000 : 4500)) return stopRec();
-    if (el > 240) return stopRec();
+    drawTuner(live.latest || null);
+    if (REC.phase === 'rec') $('recTime').textContent = mmss((now - REC.t0) / 1000);
   }
 
   $('recGo').addEventListener('click', async () => {
@@ -1218,9 +1292,9 @@ const Core = (() => {
     REC.mime = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
     try { REC.rec = new MediaRecorder(REC.stream, REC.mime ? { mimeType: REC.mime, videoBitsPerSecond: 6000000 } : undefined); }
     catch (e) { REC.rec = new MediaRecorder(REC.stream); }
-    REC.chunks = []; REC.pcm = [];
+    REC.chunks = []; REC.pcm = []; REC.frames = [];
     REC.rec.ondataavailable = e => { if (e.data && e.data.size) REC.chunks.push(e.data); };
-    REC.rec.start(1000); REC.on = true; REC.t0 = performance.now(); live.lastSound = REC.t0; REC.phase = 'rec';
+    REC.rec.start(1000); REC.t0 = performance.now(); live.recT0 = undefined; REC.phase = 'rec'; setCapture(true);
     $('recGo').disabled = false; $('recGo').classList.add('on'); $('recGo').setAttribute('aria-label', 'Stop recording');
     $('recTime').classList.add('live'); $('recHint').textContent = 'Recording. Tap to stop early.';
     $('recView').classList.add('recording');
@@ -1228,7 +1302,8 @@ const Core = (() => {
 
   async function stopRec() {
     if (REC.phase !== 'rec') return;
-    REC.phase = 'stopping'; REC.on = false; $('recGo').disabled = true; recMsg('Saving the recording…');
+    REC.phase = 'stopping'; setCapture(false); $('recGo').disabled = true; recMsg('Saving the recording…');
+    await sleep(120);
     const dur = (performance.now() - REC.t0) / 1000;
     const blob = await new Promise(res => { REC.rec.onstop = () => res(new Blob(REC.chunks, { type: REC.rec.mimeType || REC.mime || 'video/mp4' })); try { REC.rec.stop(); } catch (e) { res(new Blob(REC.chunks)); } });
     let total = 0; REC.pcm.forEach(a => total += a.length);
@@ -1245,7 +1320,7 @@ const Core = (() => {
     const ext = (blob.type || '').includes('webm') ? 'webm' : 'mp4';
     const d = new Date(), stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`;
     const file = new File([blob], `Bass ${stamp}.${ext}`, { type: blob.type || 'video/mp4' });
-    Object.assign(state, { file, pcm: audio, recorded: true, recDur: dur });
+    Object.assign(state, { file, pcm: audio, recorded: true, recDur: dur, liveFrames: REC.frames.length >= 5 ? REC.frames.slice() : null });
     $('fname').textContent = `Recorded ${mmss(dur)} · ${(file.size / 1048576).toFixed(0)} MB`;
     $('goBtn').disabled = false;
     runAnalysis();
@@ -1253,13 +1328,14 @@ const Core = (() => {
 
   function closeRec() {
     cancelAnimationFrame(REC.raf);
-    if (REC.phase === 'rec' && REC.rec) { REC.on = false; try { REC.rec.stop(); } catch (e) {} }
+    if (REC.phase === 'rec' && REC.rec) { setCapture(false); try { REC.rec.stop(); } catch (e) {} }
     REC.phase = 'idle';
     if (REC.stream) REC.stream.getTracks().forEach(t => t.stop());
     try { if (REC.sp) REC.sp.disconnect(); } catch (e) {}
+    try { if (REC.cap) REC.cap.disconnect(); } catch (e) {}
     try { if (REC.ctx) REC.ctx.close(); } catch (e) {}
     try { if (REC.wake) REC.wake.release(); } catch (e) {}
-    Object.assign(REC, { stream: null, an: null, sp: null, wake: null });
+    Object.assign(REC, { stream: null, an: null, sp: null, cap: null, wake: null });
     $('recVid').srcObject = null; $('recCount').hidden = true; recMsg('');
     $('recView').classList.remove('recording');
     $('recView').hidden = true; document.documentElement.style.overflow = '';
