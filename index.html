@@ -18,25 +18,29 @@
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800;900&display=swap">
 <style>
-/* Layout: one practice-log column; a tuner-style cents chart is the spine, findings hang off it. */
+/* Layout: a sticker-sheet practice book. One bold "today's practice" card, everything else quiet.
+   Chunky ink outlines and hard offset shadows like peel-off stickers; neon green and pink echo the bow stickers. */
 :root{
-  --bg:#EEF0EC; --surface:#FAFBF8; --ink:#17191B; --muted:#5B625F; --line:#D5DAD3;
-  --accent:#2A3B8F; --accent-ink:#FFFFFF; --accent-soft:#DDE2F5;
-  --good:#1E7A4B; --warn:#A86A12; --bad:#B3261E; --band:#E3EDE5;
-  --f-display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --f-body:"Instrument Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg:#EEF1FF; --surface:#FFFFFF; --ink:#1B1740; --muted:#55547A; --line:#D7D9F2;
+  --accent:#3D4BFF; --accent-ink:#FFFFFF; --accent-soft:#E2E5FF;
+  --good:#12924F; --warn:#B86A00; --bad:#D92B35; --band:#DDF5E7;
+  --pop:#FF4FB8; --mint:#3DF58A; --sun:#FFC83D; --on-pop:#1B1740; --on-sev:#FFFFFF; --shadow:#1B1740;
+  --f-display:"Lilita One", "Arial Rounded MT Bold", ui-rounded, system-ui, sans-serif;
+  --f-body:"Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"Nunito", ui-rounded, system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121413; --surface:#1B1E1C; --ink:#E8EBE6; --muted:#9AA39E; --line:#2E3430;
-  --accent:#9AABFF; --accent-ink:#0E1430; --accent-soft:#252C4A;
-  --good:#4CC38A; --warn:#E3AA4E; --bad:#F2766C; --band:#1F2A23; color-scheme:dark}}
+  --bg:#141129; --surface:#211D40; --ink:#F2F0FF; --muted:#ABA8D0; --line:#3A3566;
+  --accent:#8C95FF; --accent-ink:#0F0C26; --accent-soft:#2C2862;
+  --good:#3DDC84; --warn:#FFB547; --bad:#FF6B72; --band:#173A2A;
+  --pop:#FF6FC6; --mint:#3DF58A; --sun:#FFC83D; --on-pop:#1B1740; --on-sev:#0F0C26; --shadow:#000000; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121413; --surface:#1B1E1C; --ink:#E8EBE6; --muted:#9AA39E; --line:#2E3430;
-  --accent:#9AABFF; --accent-ink:#0E1430; --accent-soft:#252C4A;
-  --good:#4CC38A; --warn:#E3AA4E; --bad:#F2766C; --band:#1F2A23; color-scheme:dark}
+  --bg:#141129; --surface:#211D40; --ink:#F2F0FF; --muted:#ABA8D0; --line:#3A3566;
+  --accent:#8C95FF; --accent-ink:#0F0C26; --accent-soft:#2C2862;
+  --good:#3DDC84; --warn:#FFB547; --bad:#FF6B72; --band:#173A2A;
+  --pop:#FF6FC6; --mint:#3DF58A; --sun:#FFC83D; --on-pop:#1B1740; --on-sev:#0F0C26; --shadow:#000000; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
@@ -118,9 +122,68 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 .toggle{font-size:13px;display:inline-flex;gap:8px;align-items:center;color:var(--muted)}
 .err{color:var(--bad);font-size:14px}
 .setup-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;background:var(--bg);border-radius:10px;padding:12px}
-.setup-txt{display:flex;flex-direction:column;gap:2px;font-size:13.5px;min-width:0;flex:1 1 240px}
-.setup-txt b{font-size:14px}
+.setup-txt{font-size:13.5px;min-width:0;flex:1 1 220px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex:none}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--f-body);padding:8px 16px;border-radius:999px;cursor:pointer}
+.seg button[aria-checked="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
+/* ---- sticker-sheet theme layer ---- */
+body{font:16px/1.5 var(--f-body)}
+h1,h2,.stat .v,.detail .nm,details.numbers > summary{font-family:var(--f-display);font-weight:400;letter-spacing:.01em}
+h1{font-size:42px;line-height:1}
+h2{font-size:24px}
+h3{font-family:var(--f-body);font-weight:800;font-size:17px}
+.eyebrow{text-transform:none;letter-spacing:0;font-size:13px;font-weight:800;color:var(--muted)}
+.wrap{gap:26px}
+.top{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:14px;align-items:center;min-width:0}
+.logo{flex:none;width:58px;height:58px;border-radius:18px;background:var(--accent);border:2.5px solid var(--ink);box-shadow:4px 4px 0 var(--shadow);display:flex;align-items:center;justify-content:center;transform:rotate(-4deg)}
+.logo svg{width:40px;height:40px}
+.brand-txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.brand-txt p{color:var(--muted);font-weight:600;max-width:46ch}
+.badges{display:flex;flex-wrap:wrap;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);color:var(--ink);font-weight:800;font-size:14px;box-shadow:3px 3px 0 var(--shadow);font-variant-numeric:tabular-nums}
+.badge svg{width:18px;height:18px;flex:none}
+.badge b{font-family:var(--f-display);font-weight:400;font-size:18px}
+.panel{background:var(--surface);border:2.5px solid var(--ink);border-radius:24px;box-shadow:7px 7px 0 var(--shadow);padding:20px;gap:16px}
+label.f{font-weight:800;font-size:14px}
+select,.txt{border:2px solid var(--ink);border-radius:14px;background-color:var(--surface);font-weight:700;font-size:16px}
+.btn{border:2px solid var(--ink);background:var(--surface);color:var(--ink);font-weight:800;font-size:15px;padding:11px 18px;box-shadow:3px 3px 0 var(--shadow);transition:transform .06s,box-shadow .06s}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.btn.primary{background:var(--pop);border-color:var(--ink);color:var(--on-pop);font-family:var(--f-display);font-weight:400;font-size:21px;letter-spacing:.02em;padding:12px 30px}
+.btn:disabled{box-shadow:none}
+.fname{font-weight:700}
+.track{height:10px;border:2px solid var(--ink);background:var(--surface);border-radius:999px}
+.track i{background:var(--mint)}
+.setup-row{background:var(--accent-soft);border-radius:16px;padding:12px 14px}
+.seg{border:2px solid var(--ink);background:var(--surface)}
+.seg button{font-weight:800;color:var(--ink);padding:8px 18px}
+.example{background:var(--sun);color:var(--on-pop);border:2px solid var(--ink);border-radius:14px;font-weight:600}
+.stage{border:2.5px solid var(--ink);border-radius:20px;box-shadow:5px 5px 0 var(--shadow)}
+.note-card{border:2.5px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--shadow);padding:0;gap:0;overflow:hidden}
+.note-card > .row{background:var(--mint);color:var(--on-pop);padding:12px 18px;border-bottom:2.5px solid var(--ink)}
+.note-card > .row h3{font-family:var(--f-display);font-weight:400;font-size:22px;color:var(--on-pop)}
+.note-card > .row .eyebrow{color:var(--on-pop)}
+.note-card .coach{padding:16px 18px 6px;font-size:17px;font-weight:600;line-height:1.6}
+.note-card #coachStatus{padding:0 18px 14px}
+.stats{border:2.5px solid var(--ink);border-radius:18px;background:var(--ink);gap:2px}
+.stat .v{font-size:30px}
+.stat .k{font-weight:700}
+.find{border:2px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--shadow);padding-left:20px}
+.find::before{width:8px}
+.pill{background:var(--sevc);color:var(--on-sev);padding:3px 10px;border-radius:999px;letter-spacing:.02em;text-transform:none;font-size:12px;font-weight:800}
+.drill{border:2px dashed var(--line);border-radius:12px;font-weight:600}
+.chip{border:2px solid var(--ink);border-radius:10px;font-weight:800}
+.detail{border-left:5px solid var(--pop)}
+.tablebox{border:2.5px solid var(--ink);border-radius:18px;background:var(--surface);box-shadow:4px 4px 0 var(--shadow)}
+th{font-weight:800;color:var(--muted)}
+td{font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+.pb-pop{display:inline-flex;align-items:center;transform:rotate(-4deg);background:var(--mint);color:var(--on-pop);border:2.5px solid var(--ink);border-radius:14px;padding:6px 14px;font-family:var(--f-display);font-size:22px;box-shadow:4px 4px 0 var(--shadow);animation:pbpop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pbpop{from{transform:scale(.3) rotate(-14deg);opacity:0}to{transform:scale(1) rotate(-4deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){.pb-pop{animation:none}.btn{transition:none}}
+
 
 /* Recording screen: always dark, like a camera app */
 .rec{position:fixed;inset:0;z-index:50;background:#000;color:#F2F4F1;font-family:var(--f-body);overflow:hidden;touch-action:manipulation}
@@ -186,18 +249,25 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 .rec-top{pointer-events:none}.rec-top button{pointer-events:auto}
 .rec.training .cam{top:calc(58px + env(safe-area-inset-top,0px));right:calc(286px + env(safe-area-inset-right,0px));bottom:env(safe-area-inset-bottom,0px)}
 @media (orientation:portrait){.rec.training .cam{right:0;bottom:calc(46% + 12px)}}
+.tn,.rec-count,.rec-ex b,.tr-step{font-family:var(--f-display);font-weight:400}
+.tc,.rec-check span,.rec-strip i,.tr-q span{font-family:var(--f-body);font-weight:800}
+.recbig i{background:#FF4FB8}
+.tbtn.pri{background:#FF4FB8;border-color:#FF4FB8;color:#1B1740}
+.rec-time.live{background:#FF4FB8;color:#1B1740}
 
 </style>
 
 <div class="wrap">
-  <header>
-    <span class="eyebrow">Double bass · Trinity scales, Grades 4 and 5</span>
-    <h1>Bass Coach</h1>
-    <p>Record a scale or load a clip. It checks every note's tuning and links the misses to what the left hand, shifts and bow arm were doing.</p>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M25 8 C 16 16, 32 31, 23 40" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="26" cy="8.5" r="4" fill="#fff"/><circle cx="22" cy="39.5" r="4" fill="#fff"/><rect x="9" y="22.5" width="7" height="3.6" rx="1.5" fill="#FFC83D"/><rect x="32" y="22.5" width="7" height="3.6" rx="1.5" fill="#FFC83D"/></svg></span>
+      <div class="brand-txt"><h1>Bass Coach</h1><p>Pick a scale, press Record, get coached. Trinity scales, Grades 4 and 5.</p></div>
+    </div>
+    <div class="badges" id="badges"></div>
   </header>
 
   <section class="panel" aria-labelledby="newh">
-    <h2 id="newh">New session</h2>
+    <h2 id="newh">Today's practice</h2>
     <label class="f">Exercise (Trinity scales book, from 2016)<select id="pSel"></select></label>
     <div class="pick" id="custom" hidden>
       <label class="f">Key<select id="kSel"></select></label>
@@ -207,8 +277,11 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
     </div>
     <p id="exNote" class="muted" style="font-size:13px"></p>
     <div class="setup-row">
-      <div class="setup-txt"><b>Bow and bridge tracking</b><span id="setupTxt" class="muted"></span></div>
-      <div class="row"><button class="btn" id="trainBtn">Training mode</button><label class="toggle"><input type="checkbox" id="liveChk"> Live mode</label></div>
+      <div class="seg" role="radiogroup" aria-label="Mode">
+        <button type="button" role="radio" id="modeLive" aria-checked="true">Live</button>
+        <button type="button" role="radio" id="modeTrain" aria-checked="false">Training</button>
+      </div>
+      <span id="setupTxt" class="muted setup-txt"></span>
     </div>
     <label class="f">Tracking detail
       <select id="fpsSel">
@@ -255,7 +328,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 
   <section id="results" class="sec" aria-labelledby="resh">
     <div class="row" style="justify-content:space-between">
-      <h2 id="resh">Session report</h2>
+      <h2 id="resh">Your report</h2><div id="pbPop" class="pb-pop" hidden></div>
       <span id="resEx" class="muted" style="font-size:14px"></span>
     </div>
     <div id="exampleBanner" class="example"><b>Example</b><span>Made-up numbers showing what a report looks like. Record or load a clip to replace it.</span></div>
@@ -273,7 +346,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 
     <article class="note-card" aria-labelledby="noteh">
       <div class="row" style="justify-content:space-between;align-items:baseline">
-        <h3 id="noteh">Your coach's note</h3>
+        <h3 id="noteh">Coach's note</h3>
         <span class="eyebrow" id="styleTag"></span>
       </div>
       <div class="coach" id="coachTxt"></div>
@@ -308,7 +381,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
   </section>
 
   <section class="sec" aria-labelledby="histh">
-    <h2 id="histh">Recent sessions</h2>
+    <h2 id="histh">Practice log</h2>
     <div class="tablebox"><table id="hist"><thead><tr><th>Date</th><th>Exercise</th><th>In tune</th><th>Notes</th><th>Shifts</th></tr></thead><tbody></tbody></table></div>
     <p class="muted" id="histEmpty" style="font-size:14px">Sessions you analyse on this phone are listed here so you can track progress toward the exam.</p>
   </section>
@@ -1207,6 +1280,7 @@ const Inst = (() => {
   function render() {
     const { notes, res, ex } = state;
     $('exampleBanner').hidden = !state.example;
+    $('pbPop').hidden = state.example || !state.pb; $('pbPop').textContent = state.pb || '';
     $('resEx').textContent = ex.label;
     const s = res.summary;
     const stats = [
@@ -1239,7 +1313,7 @@ const Inst = (() => {
     g += `<rect x="${padL}" y="${y(15)}" width="${W - padL - padR}" height="${y(-15) - y(15)}" fill="var(--band)"/>`;
     [50, 30, 15, 0, -15, -30, -50].forEach(c => {
       g += `<line x1="${padL}" x2="${W - padR}" y1="${y(c)}" y2="${y(c)}" stroke="var(--line)" stroke-width="${c === 0 ? 1.5 : 1}" ${c && Math.abs(c) !== 50 ? 'stroke-dasharray="2 3"' : ''}/>`;
-      g += `<text x="${padL - 6}" y="${y(c) + 4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${c > 0 ? '+' + c : c === 0 ? '0' : '−' + (-c)}</text>`;
+      g += `<text x="${padL - 6}" y="${y(c) + 4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Nunito, system-ui, sans-serif" font-weight="700">${c > 0 ? '+' + c : c === 0 ? '0' : '−' + (-c)}</text>`;
     });
     ns.forEach((n, i) => {
       const x = padL + i * bw, cx = x + bw / 2, c = Math.max(-50, Math.min(50, n.cents));
@@ -1250,7 +1324,7 @@ const Inst = (() => {
       g += `<rect x="${cx - Math.min(7, bw * 0.32)}" y="${Math.min(y0, y1)}" width="${Math.min(14, bw * 0.64)}" height="${bh}" rx="2" fill="${colorFor(n.cents)}"/>`;
       if (n.status === 'wrong') g += `<circle cx="${cx}" cy="${top + h + 26}" r="3" fill="var(--bad)"/>`;
       if (n.shift) g += `<text x="${cx}" y="${top - 5}" text-anchor="middle" font-size="10" fill="var(--muted)">▾</text>`;
-      g += `<text x="${cx}" y="${top + h + 15}" text-anchor="middle" font-size="10.5" fill="${n.status === 'wrong' ? 'var(--bad)' : 'var(--ink)'}" font-weight="${selected ? 700 : 500}" font-family="Instrument Sans, system-ui, sans-serif">${esc(C.noteName(n.n, flats))}</text>`;
+      g += `<text x="${cx}" y="${top + h + 15}" text-anchor="middle" font-size="10.5" fill="${n.status === 'wrong' ? 'var(--bad)' : 'var(--ink)'}" font-weight="${selected ? 700 : 500}" font-family="Nunito, system-ui, sans-serif">${esc(C.noteName(n.n, flats))}</text>`;
       g += `</g>`;
     });
     g += `</svg>`;
@@ -1353,16 +1427,30 @@ const Inst = (() => {
   const HK = 'basscoach.sessions';
   const loadHist = () => { try { return JSON.parse(localStorage.getItem(HK) || '[]'); } catch (e) { return []; } };
   function saveHistory(ex, s) {
-    const h = loadHist(); h.unshift({ d: Date.now(), ex: ex.label, pct: s.pct, c: s.correct, e: s.expected, sh: s.shifts, sok: s.shiftsOk });
-    try { localStorage.setItem(HK, JSON.stringify(h.slice(0, 40))); } catch (e) {}
+    const h = loadHist();
+    const prev = h.filter(r => r.ex === ex.label).reduce((m, r) => Math.max(m, r.pct), -1);
+    state.pb = prev < 0 ? 'First score on this scale!' : s.pct > prev ? 'New personal best!' : null;
+    h.unshift({ d: Date.now(), ex: ex.label, pct: s.pct, c: s.correct, e: s.expected, sh: s.shifts, sok: s.shiftsOk });
+    try { localStorage.setItem(HK, JSON.stringify(h.slice(0, 60))); } catch (e) {}
     renderHist();
   }
+  const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4 0-6 1-9z" fill="var(--sun)" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="var(--pop)" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  function renderBadges() {
+    const h = loadHist(), days = new Set(h.map(r => new Date(r.d).toDateString()));
+    let streak = 0; const d = new Date();
+    if (!days.has(d.toDateString())) d.setDate(d.getDate() - 1);
+    while (days.has(d.toDateString())) { streak++; d.setDate(d.getDate() - 1); }
+    const lbl = currentEx().label, best = h.filter(r => r.ex === lbl).reduce((m, r) => Math.max(m, r.pct), -1);
+    $('badges').innerHTML = `<span class="badge">${FLAME}<b>${streak}</b> day streak</span><span class="badge">${STAR}${best >= 0 ? `Best <b>${best}%</b> on this scale` : 'No score on this scale yet'}</span>`;
+  }
   function renderHist() {
-    const h = loadHist();
+    const h = loadHist(); renderBadges();
     $('histEmpty').hidden = !!h.length; $('hist').hidden = !h.length;
     $('hist').querySelector('tbody').innerHTML = h.slice(0, 12).map(r => `<tr><td>${new Date(r.d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td><td>${esc(r.ex)}</td><td>${r.pct}%</td><td>${r.e ? r.c + '/' + r.e : '–'}</td><td>${r.sh ? (r.sok ?? r.sh) + '/' + r.sh : '–'}</td></tr>`).join('');
   }
   renderHist();
+  ['pSel', 'kSel', 'tSel', 'rSel', 'oSel'].forEach(id => $(id).addEventListener('change', renderBadges));
 
   // ---------- names (kept on this device) ----------
   const DEFAULT_NAMES = { player: '', teacher: '' };
@@ -1431,7 +1519,10 @@ const Inst = (() => {
 
   // ---------- in-app recorder (hosted version only) ----------
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-  $('recBtn').addEventListener('click', () => { if (canRecord) openRec('record'); else $('recIn').click(); });
+  $('recBtn').addEventListener('click', () => {
+    if (uiMode === 'train') { if (canRecord) openRec('train'); else showErr('Training needs the camera, which this browser does not allow.'); return; }
+    if (canRecord) openRec('record'); else $('recIn').click();
+  });
   const CK = 'basscoach.cam';
   let facing = 'user';
   try { facing = localStorage.getItem(CK) || 'user'; } catch (e) {}
@@ -1695,21 +1786,25 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
 
 
   // ---------- Training mode and Live mode (bow and bridge tracking) ----------
-  const SETUP_K = 'basscoach.setup', LIVE_K = 'basscoach.live';
-  let SETUP = null, liveMode = false;
-  try { SETUP = Inst.deserialise(localStorage.getItem(SETUP_K) || ''); liveMode = localStorage.getItem(LIVE_K) === '1'; } catch (e) {}
+  const SETUP_K = 'basscoach.setup';
+  let SETUP = null, uiMode = 'live'; // Live is the default every time the app opens
+  try { SETUP = Inst.deserialise(localStorage.getItem(SETUP_K) || ''); } catch (e) {}
   const setupOk = () => !!(SETUP && Inst.complete(SETUP) && SETUP.saved);
-  const liveOn = () => liveMode && setupOk();
+  const liveOn = () => setupOk();
   const instToCore = (pos, a) => { const o = {}; Inst.KEYS.forEach(k => { o[k] = pos[k] ? { x: pos[k][0] * a, y: pos[k][1] } : null; }); return o; };
   function renderSetup() {
-    const ok = setupOk();
-    $('liveChk').disabled = !ok; $('liveChk').checked = ok && liveMode;
-    $('setupTxt').textContent = ok
-      ? `Set up ${new Date(SETUP.saved).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}. ${liveMode ? 'Live mode is on: the bow, bridge and nut are tracked while he records.' : 'Live mode is off: only hands and arms are tracked.'}`
-      : 'Not set up yet. Put two small bright stickers on the bow stick, one near the frog and one near the tip, then run Training mode.';
+    const ok = setupOk(), train = uiMode === 'train';
+    $('modeLive').setAttribute('aria-checked', String(!train)); $('modeTrain').setAttribute('aria-checked', String(train));
+    $('recBtn').textContent = train ? 'Start training' : 'Record';
+    $('setupTxt').textContent = train
+      ? 'Teach it the nut, bridge and the two bow stickers, check the tracking, then save. It switches back to Live afterwards.'
+      : ok ? `Tracking hands, arms, bow, bridge and nut (trained ${new Date(SETUP.saved).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}).`
+      : 'Tracking hands and arms. Switch to Training once to add the bow and bridge (needs two stickers on the bow).';
   }
-  $('liveChk').addEventListener('change', () => { liveMode = $('liveChk').checked; try { localStorage.setItem(LIVE_K, liveMode ? '1' : '0'); } catch (e) {} renderSetup(); });
-  $('trainBtn').addEventListener('click', () => { if (canRecord) openRec('train'); else showErr('Training mode needs the camera, which this browser does not allow.'); });
+  const setMode = m => { uiMode = m; renderSetup(); };
+  $('modeLive').addEventListener('click', () => setMode('live'));
+  $('modeTrain').addEventListener('click', () => setMode('train'));
+  $('modeLive').parentElement.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { const m = uiMode === 'live' ? 'train' : 'live'; setMode(m); $(m === 'live' ? 'modeLive' : 'modeTrain').focus(); e.preventDefault(); } });
   renderSetup();
 
   // clips loaded from a file: track the instrument too when Live mode is on
@@ -1815,10 +1910,10 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
       TR.step = 'check'; TR.tr = Inst.tracker(TR.S); TR.hist = []; TR.ghost = Object.assign({}, TR.pos);
       $('recVid').play().catch(() => {}); trainUi(); trainLoop(); return;
     }
-    TR.S.saved = Date.now(); SETUP = TR.S; liveMode = true;
-    try { localStorage.setItem(SETUP_K, Inst.serialise(SETUP)); localStorage.setItem(LIVE_K, '1'); } catch (e) {}
-    renderSetup(); closeRec();
-    $('setupTxt').textContent = 'Saved. Live mode is on: the bow, bridge and nut will be tracked in his recordings.';
+    TR.S.saved = Date.now(); SETUP = TR.S;
+    try { localStorage.setItem(SETUP_K, Inst.serialise(SETUP)); } catch (e) {}
+    closeRec(); setMode('live');
+    $('setupTxt').textContent = 'Training saved. Back in Live: the bow, bridge and nut are now tracked in every recording.';
   });
 
   const cam = $('cam');
