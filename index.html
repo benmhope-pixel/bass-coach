@@ -117,11 +117,16 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 .sec{display:flex;flex-direction:column;gap:12px}
 .toggle{font-size:13px;display:inline-flex;gap:8px;align-items:center;color:var(--muted)}
 .err{color:var(--bad);font-size:14px}
+.setup-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;background:var(--bg);border-radius:10px;padding:12px}
+.setup-txt{display:flex;flex-direction:column;gap:2px;font-size:13.5px;min-width:0;flex:1 1 240px}
+.setup-txt b{font-size:14px}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
 
 /* Recording screen: always dark, like a camera app */
 .rec{position:fixed;inset:0;z-index:50;background:#000;color:#F2F4F1;font-family:var(--f-body);overflow:hidden;touch-action:manipulation}
+.rec .cam{position:absolute;inset:0;touch-action:none}
 .rec video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.rec #camOvl{position:absolute;inset:0;width:100%;height:100%}
 .rec .guide{position:absolute;left:max(7%,env(safe-area-inset-left,0px));right:max(7%,env(safe-area-inset-right,0px));top:calc(118px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));border:2px dashed rgba(255,255,255,.45);border-radius:14px;pointer-events:none;display:flex;justify-content:center;align-items:flex-start}
 .rec .guide span{margin-top:-11px;background:#000;padding:0 10px;font-size:12.5px;color:rgba(255,255,255,.8);border-radius:6px;text-align:center}
 .rec .rot{display:none}
@@ -161,10 +166,26 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
 .rec-check span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#C9861C;margin-right:6px;vertical-align:1px}
 .rec-check span.ok{color:#fff}.rec-check span.ok::before{background:#2E9E62}
 .rec.recording .rec-check{display:none}
-.rec.mirror video{transform:scaleX(-1)}
+.rec.mirror .cam{transform:scaleX(-1)}
 .rec.recording #recFlip{visibility:hidden}
 .tn{font-size:52px}
 .tuner{width:min(360px,60vw)}
+.rec.training .rec-ctl,.rec.training .tuner,.rec.training .rec-strip,.rec.training .guide,.rec.training .rec-time{display:none}
+.train{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:calc(62px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:262px;overflow-y:auto;background:rgba(10,12,11,.82);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;color:#F2F4F1}
+@media (orientation:portrait){.train{left:max(12px,env(safe-area-inset-left,0px));top:auto;width:auto;max-height:46%}}
+.tr-step{font-family:var(--f-display);font-size:15px}
+.tr-text{font-size:14px;line-height:1.4;color:rgba(255,255,255,.88)}
+.tr-q{display:flex;flex-wrap:wrap;gap:5px}
+.tr-q span{font:500 12px var(--f-mono);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.12)}
+.tr-q span.g{background:#2E9E62}.tr-q span.w{background:#C9861C}.tr-q span.b{background:#D2452F}
+.tr-btns{display:flex;gap:8px;flex-wrap:wrap}
+.tbtn{flex:1;min-width:84px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:10px 12px;font:600 14px var(--f-body);cursor:pointer}
+.tbtn.pri{background:#9AABFF;border-color:#9AABFF;color:#0E1430}
+.tbtn:disabled{opacity:.4;cursor:default}
+.tbtn:focus-visible{outline:3px solid #9AABFF;outline-offset:2px}
+.rec-top{pointer-events:none}.rec-top button{pointer-events:auto}
+.rec.training .cam{top:calc(58px + env(safe-area-inset-top,0px));right:calc(286px + env(safe-area-inset-right,0px));bottom:env(safe-area-inset-bottom,0px)}
+@media (orientation:portrait){.rec.training .cam{right:0;bottom:calc(46% + 12px)}}
 
 </style>
 
@@ -185,6 +206,10 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
       <label class="f">Starts on<select id="oSel"><option value="0">Lowest key note on the bass</option><option value="1">The key note an octave higher</option></select></label>
     </div>
     <p id="exNote" class="muted" style="font-size:13px"></p>
+    <div class="setup-row">
+      <div class="setup-txt"><b>Bow and bridge tracking</b><span id="setupTxt" class="muted"></span></div>
+      <div class="row"><button class="btn" id="trainBtn">Training mode</button><label class="toggle"><input type="checkbox" id="liveChk"> Live mode</label></div>
+    </div>
     <label class="f">Tracking detail
       <select id="fpsSel">
         <option value="6">Standard, faster to process</option>
@@ -209,6 +234,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
         <li>Use the Record button here. It films with the front camera so he can see himself, the tuner and the notes, and start it on his own (tap ⟲ for the back camera if someone else is filming). It records at 1080p, 30 fps with the phone's voice processing off, so the tuning is measured cleanly.</li>
         <li>Landscape, on the stand about 1.5 m away, at chest height, angled from his front-left so the left hand and the fingerboard face the camera.</li>
         <li>Get head, both arms and the bass down to the bridge in frame. Light on the fingerboard helps the finger tracking.</li>
+        <li>For bow tracking, wrap two bands of bright tape (about 2 cm wide) round the bow stick: one just above the frog, one near the tip. Neon green, pink or orange work best. Then run Training mode once.</li>
         <li>Quiet room, no metronome or drone on speaker during the take. One exercise per clip, at exam tempo.</li>
       </ul>
       <div class="row" style="margin-top:12px">
@@ -217,10 +243,11 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
       </div>
     </details>
     <details>
-      <summary>Names</summary>
+      <summary>Player and bass</summary>
       <div class="pick" style="margin-top:12px">
         <label class="f">Player's name<input id="nmPlayer" class="txt" autocomplete="off" placeholder="Used in the coach's note"></label>
         <label class="f">Teacher's name<input id="nmTeacher" class="txt" autocomplete="off" placeholder="The note follows their teaching style"></label>
+        <label class="f">Bass size<select id="nmSize"><option value="half">1/2 size</option><option value="threeq">3/4 size</option><option value="sevenq">7/8 size</option><option value="full">4/4 (full) size</option></select></label>
       </div>
       <p class="muted" style="font-size:13px;margin-top:8px">Kept on this phone only.</p>
     </details>
@@ -287,7 +314,7 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
   </section>
 </div>
 <div id="recView" class="rec" hidden role="dialog" aria-label="Record an exercise">
-  <video id="recVid" playsinline muted autoplay></video>
+  <div class="cam" id="cam"><video id="recVid" playsinline muted autoplay></video><canvas id="camOvl"></canvas></div>
   <div class="guide"><span>Head, both arms and the bass down to the bridge inside the frame</span></div>
   <div class="rot">Turn the phone sideways for the best view of both hands</div>
   <div class="rec-top">
@@ -299,8 +326,18 @@ td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-
   <div class="rec-strip" id="recStrip" aria-hidden="true"></div>
   <div class="rec-count" id="recCount" hidden></div>
   <div class="tuner" aria-live="off"><span class="tn" id="tnNote">–</span><div class="tbar"><i id="tnNeedle"></i></div><span class="tc mono" id="tnCents">Play a note to check the sound</span></div>
-  <div class="rec-ctl"><div class="rec-check"><span id="ckHand">Left hand</span><span id="ckBody">Bow arm</span></div><button class="recbig" id="recGo" aria-label="Start recording" disabled><i></i></button><span id="recHint">Tap to start. It stops by itself when the exercise is done.</span></div>
+  <div class="rec-ctl"><div class="rec-check"><span id="ckHand">Left hand</span><span id="ckBody">Bow arm</span><span id="ckBridge" hidden>Bridge</span><span id="ckBow" hidden>Bow</span></div><button class="recbig" id="recGo" aria-label="Start recording" disabled><i></i></button><span id="recHint">Tap to start. It stops by itself when the exercise is done.</span></div>
   <div class="rec-msg" id="recMsg" hidden></div>
+  <div class="train" id="trainPanel" hidden>
+    <b class="tr-step" id="trStep"></b>
+    <p class="tr-text" id="trText"></p>
+    <div class="tr-q" id="trQ"></div>
+    <div class="tr-btns">
+      <button class="tbtn" id="trUndo">Undo</button>
+      <button class="tbtn" id="trMain">Freeze</button>
+      <button class="tbtn pri" id="trNext" disabled>Next</button>
+    </div>
+  </div>
 </div>
 
 <script src="mp/hands/hands.js"></script>
@@ -505,15 +542,64 @@ const Core = (() => {
     return o;
   }
 
-  function fuse(notes, frames) {
-    const feats = frames.map(f => ({ t: f.t, ...frameFeatures(f) }));
+  // ---------- Instrument geometry (from Training mode: nut, bridge, frog and tip stickers) ----------
+  const STRINGS = [28, 33, 38, 43]; // open E1, A1, D2, G2
+  const SIZES = { half: 95, threeq: 104, sevenq: 107, full: 110 }; // vibrating string length, cm
+  function instFeatures(fr) {
+    const I = fr.inst; const o = {};
+    if (!I || !I.nut || !I.bridge) return o;
+    const N = I.nut, B = I.bridge, sx = B.x - N.x, sy = B.y - N.y, L2 = sx * sx + sy * sy;
+    if (L2 < 1e-6) return o;
+    // stopping finger: of the left-hand fingertips lying on the string line, the one nearest the bridge
+    if (fr.lh) {
+      let best = -1;
+      for (const k of [8, 12, 16, 20]) {
+        const p = fr.lh[k], t = ((p.x - N.x) * sx + (p.y - N.y) * sy) / L2;
+        const d = Math.abs((p.x - N.x) * sy - (p.y - N.y) * sx) / Math.sqrt(L2);
+        if (d / Math.sqrt(L2) < 0.07 && t > -0.02 && t < 0.75 && t > best) best = t;
+      }
+      if (best >= 0) o.stopT = best;
+    }
+    if (I.frog && I.tip) {
+      const F = I.frog, T = I.tip, bx = T.x - F.x, by = T.y - F.y;
+      const den = sx * by - sy * bx;
+      if (Math.abs(den) > 1e-9) {
+        const a = ((F.x - N.x) * by - (F.y - N.y) * bx) / den;   // along the string, 0 nut to 1 bridge
+        const b = ((F.x - N.x) * sy - (F.y - N.y) * sx) / den;   // along the bow, 0 frog sticker to 1 tip sticker
+        if (a > 0.55 && a < 1.08 && b > -0.4 && b < 1.4) { o.contact = 1 - a; o.bowB = b; }
+      }
+      let ang = Math.atan2(sx * by - sy * bx, sx * bx + sy * by) * 180 / Math.PI; // bow vs string direction
+      ang = ((ang % 180) + 180) % 180; o.bowTilt = ang - 90; // 0 when the bow crosses the string square
+    }
+    return o;
+  }
+
+  function fuse(notes, frames, opts = {}) {
+    const Lcm = SIZES[opts.size] || SIZES.threeq;
+    const feats = frames.map(f => ({ t: f.t, ...frameFeatures(f), ...instFeatures(f) }));
     for (const nt of notes) {
       const dur = nt.t1 - nt.t0;
       let fs = feats.filter(f => f.t >= nt.t0 + 0.2 * dur && f.t <= nt.t1 - 0.1 * dur);
       if (!fs.length) { const mid = (nt.t0 + nt.t1) / 2; let best = null; for (const f of feats) if (!best || Math.abs(f.t - mid) < Math.abs(best.t - mid)) best = f; if (best && Math.abs(best.t - mid) < 0.25) fs = [best]; }
-      for (const k of ['span', 'curl', 'lx', 'ly', 'elbow', 'elbowLift', 'neck', 'tilt']) {
+      for (const k of ['span', 'curl', 'lx', 'ly', 'elbow', 'elbowLift', 'neck', 'tilt', 'stopT', 'contact', 'bowTilt']) {
         const v = fs.map(f => f[k]).filter(fin); nt[k] = v.length ? median(v) : NaN;
       }
+      nt.contactCm = fin(nt.contact) ? nt.contact * Lcm : NaN;
+      const cs = fs.map(f => f.contact).filter(fin); nt.contactSd = cs.length >= 3 ? std(cs) * Lcm : NaN;
+      // bow direction: the contact point moves frog-to-tip on a down bow
+      const bb = fs.filter(f => fin(f.bowB));
+      if (bb.length >= 2) { const sl = (bb[bb.length - 1].bowB - bb[0].bowB) / Math.max(0.05, bb[bb.length - 1].t - bb[0].t); nt.bowDir = Math.abs(sl) < 0.05 ? 0 : Math.sign(sl); nt.bowUsed = Math.abs(bb[bb.length - 1].bowB - bb[0].bowB); }
+      // which string: vision when the stopping finger is visible, otherwise the lowest-position choice
+      let s = null;
+      if (fin(nt.stopT)) {
+        let bestD = 0.09;
+        for (const st of STRINGS) { const k = nt.n - st; if (k < 1 || k > 16) continue; const d = Math.abs((1 - Math.pow(2, -k / 12)) - nt.stopT); if (d < bestD) { bestD = d; s = st; } }
+      }
+      if (s === null) { for (const st of STRINGS) if (nt.n - st >= 0 && nt.n - st <= 9) s = st; if (s === null) for (const st of STRINGS) if (nt.n >= st) s = st; }
+      nt.string = s;
+      // cents to millimetres of finger placement: + means the finger is too close to the bridge (sharp)
+      const k = s === null ? 0 : nt.n - s;
+      nt.mm = k >= 1 ? Lcm * 10 * (Math.pow(2, -k / 12) - Math.pow(2, -(k + nt.cents / 100) / 12)) : NaN;
     }
     // shifts: left wrist travel between consecutive notes
     const moves = [];
@@ -538,6 +624,7 @@ const Core = (() => {
 
   // ---------- Coaching findings ----------
   const fmtC = c => (c > 0 ? '+' : c < 0 ? '−' : '') + Math.abs(Math.round(c)) + '¢';
+  const mmTxt = v => `${Math.max(1, Math.round(Math.abs(v)))} mm`;
   function analyse(notes, ex) {
     const flats = ex ? ex.flats : false;
     const name = i => noteName(notes[i].n, flats);
@@ -675,12 +762,229 @@ const Core = (() => {
       detail: 'Hand analysis needs the left hand clearly visible against the neck.', drill: 'Put the phone at front-left, about 1.5 m away at chest height, with more light on the fingerboard.', notes: [] });
 
     F.sort((a, b) => b.sev - a.sev);
+    // finger placement in millimetres (from the pitch, the bass size and the string)
+    const offMm = notes.filter(n => Math.abs(n.cents) > 15 && fin(n.mm)).map(n => Math.abs(n.mm));
+    if (offMm.length) { sum.typMm = median(offMm); const tf = F.find(f => f.id === 'tune'); if (tf && tf.sev) tf.detail += ` The typical miss is about ${mmTxt(sum.typMm)} on the fingerboard, a small adjustment of the finger rather than the whole hand.`; }
+
+    // bow: contact point and angle (needs Training mode stickers)
+    const wc = notes.filter(n => fin(n.contactCm));
+    if (wc.length >= 6) {
+      const meds = wc.map(n => n.contactCm), med = median(meds), sd = std(meds);
+      sum.contactCm = med;
+      const wob = wc.filter(n => n.ampCv > 0.35), calm = wc.filter(n => !(n.ampCv > 0.35));
+      const drift = wob.length >= 2 && calm.length ? mean(wob.map(n => n.contactCm)) - mean(calm.map(n => n.contactCm)) : 0;
+      const far = med > 17;
+      if (drift > 1.5) F.push({ id: 'contact', sev: 2, area: 'Bow arm', title: 'Bow slides toward the fingerboard on the uneven notes',
+        detail: `On the notes where the sound wobbled, the bow was about ${Math.round(drift * 10) / 10} cm further from the bridge than on the steady ones (usually ${Math.round(med)} cm from the bridge).`,
+        drill: 'Long slow bows on an open string, watching the contact point. Keep the bow the same distance from the bridge from frog to tip, with arm weight into the string.', notes: wob.map(n => notes.indexOf(n)) });
+      else if (sd > 1.6 || far) F.push({ id: 'contact', sev: far ? 2 : 1, area: 'Bow arm', title: far ? `Bow plays about ${Math.round(med)} cm from the bridge, close to the fingerboard` : 'Contact point wanders between notes',
+        detail: far ? 'Further from the bridge the string has less grip, so the sound is lighter and less focused, especially on the lower strings.' : `The distance from the bridge varies by about ±${Math.round(sd * 10) / 10} cm from note to note, so the tone keeps changing.`,
+        drill: 'Get the bow down towards the bridge. Practise open-string long bows with a strip of tape on the fingerboard edge as a "no-go" line.', notes: [] });
+      else F.push({ id: 'contact', sev: 0, area: 'Bow arm', title: 'Bow stays in one lane', detail: `The contact point stays about ${Math.round(med)} cm from the bridge, varying by only ±${Math.round(sd * 10) / 10} cm.`, drill: '', notes: [] });
+    }
+    const wt = notes.filter(n => fin(n.bowTilt));
+    if (wt.length >= 6) {
+      const dn = wt.filter(n => n.bowDir > 0).map(n => n.bowTilt), upb = wt.filter(n => n.bowDir < 0).map(n => n.bowTilt);
+      const split = dn.length >= 2 && upb.length >= 2 ? Math.abs(mean(dn) - mean(upb)) : 0, sdT = std(wt.map(n => n.bowTilt));
+      if (split > 7) F.push({ id: 'angle', sev: 2, area: 'Bow arm', title: 'Bow angle changes between down and up bows',
+        detail: `The bow tilts about ${Math.round(split)}° differently on down bows compared with up bows, so it is not travelling straight across the string.`,
+        drill: 'Slow open-string bows in front of the camera, keeping the bow parallel to the bridge. The elbow leads on the up bow, the hand leads on the down bow.', notes: [] });
+      else if (sdT > 9) F.push({ id: 'angle', sev: 1, area: 'Bow arm', title: 'Bow angle wanders', detail: `The bow's angle to the string varies by about ±${Math.round(sdT)}°.`, drill: 'Keep the bow parallel to the bridge: check it in the mirror on long open-string bows.', notes: [] });
+      else F.push({ id: 'angle', sev: 0, area: 'Bow arm', title: 'Bow travels straight', detail: 'The bow stays square to the string on both bow directions.', drill: '', notes: [] });
+    }
+    F.sort((a, b) => b.sev - a.sev);
     return { summary: sum, findings: F };
   }
 
-  return { KEYS, TYPES, RANGES, build, noteName, hzToMidi, midiToHz, median, mean, std, fin, downsample2, yinTrack, segment, align, fuse, analyse, fmtC, frameFeatures };
+  return { SIZES, mmTxt, instFeatures, KEYS, TYPES, RANGES, build, noteName, hzToMidi, midiToHz, median, mean, std, fin, downsample2, yinTrack, segment, align, fuse, analyse, fmtC, frameFeatures };
 })();
 
+
+</script>
+<script>
+// ===== Instrument tracker: learns the nut, bridge and two bow stickers from taps and corrections =====
+// Nut and bridge: a growing bank of small greyscale examples, matched by normalised cross-correlation.
+// Stickers: colour models sampled where the user taps, found as colour blobs each frame.
+const Inst = (() => {
+  const CW = 640, GW = 320, T = 17, H2 = T >> 1;
+  const KEYS = ['nut', 'bridge', 'frog', 'tip'];
+  const cv = document.createElement('canvas');
+  const g = cv.getContext('2d', { willReadFrequently: true });
+
+  // One snapshot of a video/canvas: colour at 640 wide, grey at 320 wide.
+  function grab(src) {
+    const vw = src.videoWidth || src.width, vh = src.videoHeight || src.height;
+    if (!vw || !vh) return null;
+    const w = CW, h = Math.round(CW * vh / vw);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    g.drawImage(src, 0, 0, w, h);
+    const rgba = g.getImageData(0, 0, w, h).data;
+    const gw = GW, gh = h >> 1, grey = new Float32Array(gw * gh);
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+      let s = 0;
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const i = ((2 * y + dy) * w + 2 * x + dx) * 4; s += 0.299 * rgba[i] + 0.587 * rgba[i + 1] + 0.114 * rgba[i + 2]; }
+      grey[y * gw + x] = s / 4;
+    }
+    return { rgba, w, h, grey, gw, gh, aspect: vw / vh };
+  }
+
+  // ---------- templates ----------
+  function cut(F, cx, cy) {
+    const p = new Uint8Array(T * T);
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+      const xx = Math.min(F.gw - 1, Math.max(0, cx - H2 + x)), yy = Math.min(F.gh - 1, Math.max(0, cy - H2 + y));
+      p[y * T + x] = Math.round(F.grey[yy * F.gw + xx]);
+    }
+    return p;
+  }
+  function prep(p) { let m = 0; for (const v of p) m += v; m /= p.length; let s = 0; const d = new Float32Array(p.length); for (let i = 0; i < p.length; i++) { d[i] = p[i] - m; s += d[i] * d[i]; } return { d, s: Math.sqrt(s) || 1 }; }
+  function nccAt(F, tp, cx, cy) {
+    const x0 = cx - H2, y0 = cy - H2;
+    if (x0 < 0 || y0 < 0 || x0 + T > F.gw || y0 + T > F.gh) return -1;
+    let m = 0;
+    for (let y = 0; y < T; y++) { const r = (y0 + y) * F.gw + x0; for (let x = 0; x < T; x++) m += F.grey[r + x]; }
+    m /= T * T;
+    let num = 0, ss = 0;
+    for (let y = 0; y < T; y++) { const r = (y0 + y) * F.gw + x0; for (let x = 0; x < T; x++) { const v = F.grey[r + x] - m; num += v * tp.d[y * T + x]; ss += v * v; } }
+    return ss > 1 ? num / (Math.sqrt(ss) * tp.s) : -1;
+  }
+  function search(F, tps, cx, cy, R, step) {
+    let best = { x: cx, y: cy, score: -1 };
+    for (const tp of tps) {
+      for (let y = cy - R; y <= cy + R; y += step) for (let x = cx - R; x <= cx + R; x += step) {
+        const s = nccAt(F, tp, x, y); if (s > best.score) best = { x, y, score: s };
+      }
+    }
+    if (step > 1) { // refine around the coarse best
+      const c = best;
+      for (const tp of tps) for (let y = c.y - step; y <= c.y + step; y++) for (let x = c.x - step; x <= c.x + step; x++) { const s = nccAt(F, tp, x, y); if (s > best.score) best = { x, y, score: s }; }
+    }
+    return best;
+  }
+
+  // ---------- colour ----------
+  function hsv(r, g2, b) {
+    const mx = Math.max(r, g2, b), mn = Math.min(r, g2, b), d = mx - mn;
+    let h = 0;
+    if (d) { if (mx === r) h = ((g2 - b) / d) % 6; else if (mx === g2) h = (b - r) / d + 2; else h = (r - g2) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return [h, mx ? d / mx : 0, mx / 255];
+  }
+  function sampleColour(F, x, y) {
+    const hs = [], ss = [], vs = [];
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const xx = Math.round(x) + dx, yy = Math.round(y) + dy; if (xx < 0 || yy < 0 || xx >= F.w || yy >= F.h) continue;
+      const i = (yy * F.w + xx) * 4, c = hsv(F.rgba[i], F.rgba[i + 1], F.rgba[i + 2]);
+      if (c[1] > 0.25 && c[2] > 0.2) { hs.push(c[0]); ss.push(c[1]); vs.push(c[2]); }
+    }
+    if (hs.length < 4) return null;
+    // circular mean of hue
+    let sx = 0, sy = 0; hs.forEach(h => { sx += Math.cos(h * Math.PI / 180); sy += Math.sin(h * Math.PI / 180); });
+    const h = (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
+    const med = a => a.slice().sort((p, q) => p - q)[a.length >> 1];
+    return { h, s: med(ss), v: med(vs) };
+  }
+  const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  function blobs(F, models) {
+    const { w, h, rgba } = F, lab = new Int16Array(w * h).fill(-1);
+    const hit = new Uint8Array(w * h);
+    for (let i = 0, p = 0; p < w * h; p++, i += 4) {
+      const c = hsv(rgba[i], rgba[i + 1], rgba[i + 2]);
+      for (let k = 0; k < models.length; k++) {
+        const m = models[k];
+        if (hueDist(c[0], m.h) < 16 && c[1] > Math.max(0.3, m.s * 0.55) && c[2] > Math.max(0.22, m.v * 0.45)) { hit[p] = k + 1; break; }
+      }
+    }
+    const out = [], stack = [];
+    for (let p = 0; p < w * h; p++) {
+      if (!hit[p] || lab[p] >= 0) continue;
+      const id = out.length, k = hit[p] - 1; let n = 0, sx = 0, sy = 0;
+      stack.push(p); lab[p] = id;
+      while (stack.length) {
+        const q = stack.pop(), x = q % w, y = (q / w) | 0; n++; sx += x; sy += y;
+        if (x > 0 && hit[q - 1] && lab[q - 1] < 0) { lab[q - 1] = id; stack.push(q - 1); }
+        if (x < w - 1 && hit[q + 1] && lab[q + 1] < 0) { lab[q + 1] = id; stack.push(q + 1); }
+        if (y > 0 && hit[q - w] && lab[q - w] < 0) { lab[q - w] = id; stack.push(q - w); }
+        if (y < h - 1 && hit[q + w] && lab[q + w] < 0) { lab[q + w] = id; stack.push(q + w); }
+      }
+      out.push({ k, n, x: sx / n, y: sy / n });
+    }
+    return out.filter(b => b.n >= 3).sort((a, b) => b.n - a.n).slice(0, 12);
+  }
+
+  // ---------- setup (persisted) ----------
+  const b64 = u8 => btoa(String.fromCharCode.apply(null, u8));
+  const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  function emptySetup() { return { v: 1, pts: {}, tpl: { nut: [], bridge: [] }, col: { frog: [], tip: [] }, saved: 0 }; }
+  function serialise(S) { return JSON.stringify({ v: 1, pts: S.pts, tpl: { nut: S.tpl.nut.map(b64), bridge: S.tpl.bridge.map(b64) }, col: S.col, saved: S.saved }); }
+  function deserialise(txt) {
+    try { const o = JSON.parse(txt); if (!o || o.v !== 1) return null; return { v: 1, pts: o.pts || {}, tpl: { nut: (o.tpl.nut || []).map(unb64), bridge: (o.tpl.bridge || []).map(unb64) }, col: o.col || { frog: [], tip: [] }, saved: o.saved || 0 }; } catch (e) { return null; }
+  }
+  const complete = S => !!(S && S.pts.nut && S.pts.bridge && S.pts.frog && S.pts.tip && S.tpl.nut.length && S.tpl.bridge.length && S.col.frog.length && S.col.tip.length);
+
+  // Teach one part at (nx, ny), normalised 0..1 in the raw (unmirrored) frame.
+  function teach(S, F, key, nx, ny) {
+    S.pts[key] = [nx, ny];
+    if (key === 'nut' || key === 'bridge') {
+      const bank = S.tpl[key]; bank.push(cut(F, Math.round(nx * F.gw), Math.round(ny * F.gh)));
+      if (bank.length > 6) bank.splice(1, 1); // keep the first (setup) example, roll the rest
+      return true;
+    }
+    const c = sampleColour(F, nx * F.w, ny * F.h);
+    if (!c) return false;
+    const bank = S.col[key]; bank.push(c); if (bank.length > 4) bank.splice(1, 1);
+    return true;
+  }
+
+  // ---------- tracking ----------
+  function tracker(S) {
+    const st = { last: {}, lost: {}, tps: {} };
+    KEYS.forEach(k => { st.last[k] = S.pts[k] ? S.pts[k].slice() : null; st.lost[k] = 0; });
+    const refresh = () => { st.tps.nut = S.tpl.nut.map(prep); st.tps.bridge = S.tpl.bridge.map(prep); };
+    refresh();
+    // Returns positions normalised 0..1 (raw frame) or null, plus match quality.
+    function step(F, bowHand) {
+      const out = {}, q = {};
+      for (const k of ['nut', 'bridge']) {
+        const tps = st.tps[k]; const L = st.last[k];
+        if (!tps.length || !L) { out[k] = null; continue; }
+        const cx = Math.round(L[0] * F.gw), cy = Math.round(L[1] * F.gh);
+        let r = st.lost[k] > 6 ? search(F, tps, F.gw >> 1, F.gh >> 1, Math.max(F.gw, F.gh) >> 1, 3)
+          : search(F, tps, cx, cy, st.lost[k] ? 40 : 18, st.lost[k] ? 2 : 1);
+        if (r.score >= 0.55) { st.last[k] = [r.x / F.gw, r.y / F.gh]; st.lost[k] = 0; out[k] = st.last[k].slice(); }
+        else { st.lost[k]++; out[k] = null; }
+        q[k] = r.score;
+      }
+      const fm = S.col.frog, tm = S.col.tip;
+      if (fm.length && tm.length) {
+        const models = fm.concat(tm), nf = fm.length;
+        const bs = blobs(F, models).map(b => ({ ...b, key: b.k < nf ? 'frog' : 'tip', nx: b.x / F.w, ny: b.y / F.h }));
+        const same = hueDist(fm[0].h, tm[0].h) < 25;
+        const pick = (key, avoid) => {
+          const cands = bs.filter(b => (same || b.key === key) && b !== avoid);
+          if (!cands.length) return null;
+          const L = st.last[key];
+          let ref = L;
+          if (key === 'frog' && bowHand && (!L || st.lost.frog > 3)) ref = bowHand;
+          if (!ref) return cands[0];
+          let best = null, bd = 1e9;
+          for (const b of cands) { const d = Math.hypot(b.nx - ref[0], b.ny - ref[1]) - Math.min(0.05, b.n / 4000); if (d < bd) { bd = d; best = b; } }
+          if (!same) return best; // distinct colours: the matching blob is the sticker, however far the bow moved
+          return bd < 0.35 || !L || st.lost[key] > 1 ? best : null;
+        };
+        const f = pick('frog'), t = pick('tip', f);
+        for (const [key, b] of [['frog', f], ['tip', t]]) {
+          if (b) { st.last[key] = [b.nx, b.ny]; st.lost[key] = 0; out[key] = st.last[key].slice(); }
+          else { st.lost[key]++; out[key] = null; }
+        }
+      }
+      return { pos: out, q };
+    }
+    function reseed(key, p) { st.last[key] = p.slice(); st.lost[key] = 0; refresh(); }
+    return { step, reseed, refresh };
+  }
+
+  return { KEYS, grab, teach, tracker, emptySetup, serialise, deserialise, complete, sampleColour };
+})();
 
 </script>
 <script>
@@ -829,7 +1133,9 @@ const Core = (() => {
     for (let t = Math.min(0.05, dur / 2); t < dur; t += step) {
       await seek(t);
       const hr = await m.hands(vid), pr = await m.pose(vid);
-      frames.push(buildFrame(t, hr, pr, a));
+      const fr = buildFrame(t, hr, pr, a);
+      if (window.__instFrame) fr.inst = window.__instFrame(vid, a, pr);
+      frames.push(fr);
       const done = t / dur, el = (performance.now() - t0) / 1000;
       const eta = done > 0.05 ? Math.round(el / done - el) : null;
       onP(done, `Tracking hands and arms · ${Math.round(done * 100)}%${eta !== null ? ` · about ${eta < 60 ? eta + ' s' : Math.ceil(eta / 60) + ' min'} left` : ''}`);
@@ -877,9 +1183,10 @@ const Core = (() => {
       if (notes.length < 3) throw new Error('Only ' + notes.length + ' clear notes were heard. Move the phone closer or play with a fuller sound.');
       prog(0.1, 'Loading the hand and pose models (first time takes a while)');
       const fps = +$('fpsSel').value;
+      if (window.__instReset) window.__instReset();
       const frames = liveF || (opened ? await trackVideo(fps, (p, txt) => prog(0.1 + 0.85 * p, txt)) : (state.liveFrames || []));
       prog(0.97, 'Building the report');
-      C.fuse(notes, frames);
+      C.fuse(notes, frames, { size: (typeof names !== 'undefined' && names.size) || 'threeq' });
       const res = C.analyse(notes, ex.notes ? ex : null);
       Object.assign(state, { ex, notes, frames, res, example: false, sel: -1 });
       saveHistory(ex, res.summary);
@@ -962,6 +1269,8 @@ const Core = (() => {
     bits.push(`Settled at <b class="mono">${C.fmtC(n.cents)}</b>`);
     if (Math.abs(n.landing - n.cents) > 8) bits.push(`arrived at <span class="mono">${C.fmtC(n.landing)}</span>`);
     if (n.shift) bits.push('came after a shift');
+    if (C.fin(n.mm) && Math.abs(n.cents) > 8) bits.push(`finger about ${C.mmTxt(n.mm)} too close to the ${n.mm < 0 ? 'nut' : 'bridge'}`);
+    if (C.fin(n.contactCm)) bits.push(`bow ${Math.round(n.contactCm)} cm from the bridge`);
     if (C.fin(n.spanRes)) bits.push(Math.abs(n.spanRes) < 0.04 ? 'hand frame normal' : `hand frame ${Math.round(Math.abs(n.spanRes) * 100)}% ${n.spanRes < 0 ? 'narrower' : 'wider'} than usual here`);
     if (C.fin(n.curl) && n.curl > 165) bits.push('fingers flattened');
     if (n.ampCv > 0.35) bits.push('uneven bow sound');
@@ -1013,6 +1322,11 @@ const Core = (() => {
     const css = getComputedStyle(document.documentElement);
     const lines = (pts, pairs, col, lw) => { ctx2.strokeStyle = col; ctx2.lineWidth = lw; ctx2.beginPath(); pairs.forEach(([i, j]) => { if (pts[i].v !== undefined && (pts[i].v < 0.4 || pts[j].v < 0.4)) return; const [x1, y1] = P(pts[i]), [x2, y2] = P(pts[j]); ctx2.moveTo(x1, y1); ctx2.lineTo(x2, y2); }); ctx2.stroke(); };
     if (fr.pose) lines(fr.pose, ARMS, 'rgba(255,255,255,.75)', 2.5);
+    if (fr.inst) {
+      const I = fr.inst, seg = (p, q, col, lw) => { if (!p || !q) return; const [x1, y1] = P(p), [x2, y2] = P(q); ctx2.strokeStyle = col; ctx2.lineWidth = lw; ctx2.beginPath(); ctx2.moveTo(x1, y1); ctx2.lineTo(x2, y2); ctx2.stroke(); };
+      seg(I.nut, I.bridge, 'rgba(255,255,255,.55)', 1.5); seg(I.frog, I.tip, '#7CF29C', 2.5);
+      [I.nut, I.bridge].forEach(q => { if (q) { const [x, y] = P(q); ctx2.fillStyle = '#fff'; ctx2.beginPath(); ctx2.arc(x, y, 3.5, 0, 7); ctx2.fill(); } });
+    }
     if (fr.rh) lines(fr.rh, HAND, 'rgba(255,255,255,.6)', 1.5);
     if (fr.lh) {
       lines(fr.lh, HAND, '#9AABFF', 2);
@@ -1059,9 +1373,9 @@ const Core = (() => {
   const teacher = () => (names.teacher || '').trim();
   const withName = s => who() ? `${s}, ${who()}` : s;
   const styleTag = () => { $('styleTag').textContent = teacher() ? `In ${teacher()}'s style` : ''; };
-  $('nmPlayer').value = names.player || ''; $('nmTeacher').value = names.teacher || '';
-  ['nmPlayer', 'nmTeacher'].forEach(id => $(id).addEventListener('change', () => {
-    names = { player: $('nmPlayer').value, teacher: $('nmTeacher').value };
+  $('nmPlayer').value = names.player || ''; $('nmTeacher').value = names.teacher || ''; $('nmSize').value = names.size || 'threeq';
+  ['nmPlayer', 'nmTeacher', 'nmSize'].forEach(id => $(id).addEventListener('change', () => {
+    names = { player: $('nmPlayer').value, teacher: $('nmTeacher').value, size: $('nmSize').value };
     try { localStorage.setItem(NK, JSON.stringify(names)); } catch (e) {}
     styleTag(); if (state.res) $('coachTxt').textContent = ruleNote();
   }));
@@ -1087,9 +1401,11 @@ const Core = (() => {
     if (has('stretch')) fixes.push(`Higher up, your hand is stretching too far, so ${list(has('stretch').notes)} went sharp. Tones and semitones get smaller as you go up the bass.`);
     const sh = has('shift');
     if (sh) { const flatS = sh.detail.includes('land short'), sharpS = sh.detail.includes('overshoot'); fixes.push(`How far is the shift? Your shifts were missing: ${list(sh.notes)}. ${flatS ? 'They landed flat, so the shift was too small.' : sharpS ? 'They overshot, and remember, higher up the bass the shift is smaller than you think.' : ''} Before each one, say it out loud: tone or semitone? Then sing the note you're going to before you move.`.replace('  ', ' ')); }
+    if (has('contact')) fixes.push(`Get the bow down towards the bridge! ${has('contact').title.includes('uneven') ? 'On the notes that wobbled it slid towards the fingerboard, where the string has less grip.' : 'It is sitting a long way from the bridge, so the sound is light and fuzzy.'} Keep it in one lane from frog to tip.`);
+    if (has('angle')) fixes.push(`Keep the bow parallel to the bridge. It twists between down and up bows, so relax that elbow and let it lead on the up bow.`);
     if (has('landing')) fixes.push(`You're arriving out of tune and then sliding to fix it. Sing the landing note first so your ears know where you're going.`);
     const tn = F.find(f => f.id === 'tune');
-    if (!fixes.length && tn && tn.sev > 0) { const lean = s.tendency < -6 ? 'Quite a few notes were flat' : s.tendency > 6 ? 'Quite a few notes were sharp' : 'A few notes wandered'; fixes.push(`${lean}: ${list(tn.notes)}. Use your ears. Stop, freeze on the note, sing it, correct it, then play on.`); }
+    if (!fixes.length && tn && tn.sev > 0) { const lean = s.tendency < -6 ? 'Quite a few notes were flat' : s.tendency > 6 ? 'Quite a few notes were sharp' : 'A few notes wandered'; fixes.push(`${lean}: ${list(tn.notes)}. Use your ears. Stop, freeze on the note, sing it, correct it, then play on.${C.fin(s.typMm) ? ` The misses are only about ${C.mmTxt(s.typMm)}, so it's a small finger adjustment, not a new position.` : ''}`); }
     if (has('curl')) fixes.push(`Curved fingers, please. They went flat on ${has('curl').notes.length} notes. Click and flicks every day, and check in the mirror.`);
     if (has('bowarm') || has('tone')) fixes.push(`Relax that elbow and keep the bow in the string, so the sound doesn't wobble. And pinky over the bow!`);
     if (has('shoulders')) fixes.push(`Your shoulders crept up as you went higher. Sit centred, let them drop.`);
@@ -1115,7 +1431,7 @@ const Core = (() => {
 
   // ---------- in-app recorder (hosted version only) ----------
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-  $('recBtn').addEventListener('click', () => { if (canRecord) openRec(); else $('recIn').click(); });
+  $('recBtn').addEventListener('click', () => { if (canRecord) openRec('record'); else $('recIn').click(); });
   const CK = 'basscoach.cam';
   let facing = 'user';
   try { facing = localStorage.getItem(CK) || 'user'; } catch (e) {}
@@ -1148,7 +1464,12 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
   }
   function recMsg(t) { $('recMsg').textContent = t || ''; $('recMsg').hidden = !t; }
 
-  async function openRec() {
+  async function openRec(mode) {
+    REC.mode = mode === 'train' ? 'train' : 'record';
+    $('recView').classList.toggle('training', REC.mode === 'train');
+    $('trainPanel').hidden = REC.mode !== 'train';
+    const lm = REC.mode === 'record' && liveOn();
+    $('ckBridge').hidden = !lm; $('ckBow').hidden = !lm;
     REC.ex = currentEx(); resetLive();
     const AC = window.AudioContext || window.webkitAudioContext;
     REC.ctx = new AC();
@@ -1191,7 +1512,8 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
     try { if (navigator.wakeLock) REC.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
     REC.phase = 'ready'; $('recGo').disabled = false; $('recGo').focus();
     cancelAnimationFrame(REC.raf); REC.raf = requestAnimationFrame(loopLive);
-    if (location.hash !== '#notrack') trackLoop(vs);
+    if (REC.mode === 'train') trainStart();
+    else if (location.hash !== '#notrack') trackLoop(vs);
   }
 
   // Hand and pose tracking on the live camera: checks framing before, records landmarks during.
@@ -1202,6 +1524,7 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
     try { $('recMeta').textContent = meta + ' · loading tracking'; m = await loadModels(); REC.tracker = true; $('recMeta').textContent = meta; }
     catch (e) { console.error(e); $('recMeta').textContent = meta + ' · tracking unavailable'; REC.tracking = false; return; }
     const v = $('recVid');
+    REC.itr = liveOn() ? Inst.tracker(SETUP) : null;
     while (REC.phase === 'ready' || REC.phase === 'count' || REC.phase === 'rec') {
       const t0 = performance.now();
       if (v.readyState >= 2 && v.videoWidth) {
@@ -1210,6 +1533,13 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
         let hr = null, pr = null;
         try { hr = await m.hands(v); pr = await m.pose(v); } catch (e) { console.error(e); }
         const fr = buildFrame(tRel, hr, pr, a);
+        if (REC.itr) {
+          const F = Inst.grab(v), bh = pr && pr.poseLandmarks && pr.poseLandmarks[16] ? [pr.poseLandmarks[16].x, pr.poseLandmarks[16].y] : null;
+          const r = F ? REC.itr.step(F, bh) : { pos: {} };
+          fr.inst = instToCore(r.pos, a);
+          $('ckBridge').classList.toggle('ok', !!(r.pos.nut && r.pos.bridge)); $('ckBow').classList.toggle('ok', !!(r.pos.frog && r.pos.tip));
+          drawCam(r.pos, null);
+        }
         $('ckHand').classList.toggle('ok', !!fr.lh); $('ckBody').classList.toggle('ok', !!(fr.pose && fr.pose[14] && fr.pose[14].v > 0.5 && fr.pose[16] && fr.pose[16].v > 0.5));
         if (REC.phase === 'rec' && REC.on) { REC.frames.push(fr); state.aspect = a; }
       }
@@ -1348,17 +1678,203 @@ process(inp){const c=inp[0]&&inp[0][0];if(c){for(let i=0;i<c.length;i++){this.b[
     try { if (REC.wake) REC.wake.release(); } catch (e) {}
     Object.assign(REC, { stream: null, an: null, sp: null, cap: null, wake: null });
     $('recVid').srcObject = null; $('recCount').hidden = true; recMsg('');
-    $('recView').classList.remove('recording', 'mirror');
+    $('recView').classList.remove('recording', 'mirror', 'training');
+    $('trainPanel').hidden = true; REC.itr = null; TR.active = false;
+    const oc = $('camOvl'); oc.getContext('2d').clearRect(0, 0, oc.width, oc.height);
     $('recView').hidden = true; document.documentElement.style.overflow = '';
   }
   $('recClose').addEventListener('click', closeRec);
   $('recFlip').addEventListener('click', () => {
     if (REC.phase !== 'ready' && REC.phase !== 'opening') return;
+    if (REC.mode === 'train' && TR.step !== 'mark') return;
     facing = facing === 'user' ? 'environment' : 'user';
     try { localStorage.setItem(CK, facing); } catch (e) {}
-    closeRec(); openRec();
+    const m = REC.mode; closeRec(); openRec(m);
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('recView').hidden) closeRec(); });
+
+
+  // ---------- Training mode and Live mode (bow and bridge tracking) ----------
+  const SETUP_K = 'basscoach.setup', LIVE_K = 'basscoach.live';
+  let SETUP = null, liveMode = false;
+  try { SETUP = Inst.deserialise(localStorage.getItem(SETUP_K) || ''); liveMode = localStorage.getItem(LIVE_K) === '1'; } catch (e) {}
+  const setupOk = () => !!(SETUP && Inst.complete(SETUP) && SETUP.saved);
+  const liveOn = () => liveMode && setupOk();
+  const instToCore = (pos, a) => { const o = {}; Inst.KEYS.forEach(k => { o[k] = pos[k] ? { x: pos[k][0] * a, y: pos[k][1] } : null; }); return o; };
+  function renderSetup() {
+    const ok = setupOk();
+    $('liveChk').disabled = !ok; $('liveChk').checked = ok && liveMode;
+    $('setupTxt').textContent = ok
+      ? `Set up ${new Date(SETUP.saved).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}. ${liveMode ? 'Live mode is on: the bow, bridge and nut are tracked while he records.' : 'Live mode is off: only hands and arms are tracked.'}`
+      : 'Not set up yet. Put two small bright stickers on the bow stick, one near the frog and one near the tip, then run Training mode.';
+  }
+  $('liveChk').addEventListener('change', () => { liveMode = $('liveChk').checked; try { localStorage.setItem(LIVE_K, liveMode ? '1' : '0'); } catch (e) {} renderSetup(); });
+  $('trainBtn').addEventListener('click', () => { if (canRecord) openRec('train'); else showErr('Training mode needs the camera, which this browser does not allow.'); });
+  renderSetup();
+
+  // clips loaded from a file: track the instrument too when Live mode is on
+  let clipTracker = null;
+  window.__instReset = () => { clipTracker = liveOn() ? Inst.tracker(SETUP) : null; };
+  window.__instFrame = (src, a, pr) => {
+    if (!clipTracker) return null;
+    const F = Inst.grab(src); if (!F) return null;
+    const bh = pr && pr.poseLandmarks && pr.poseLandmarks[16] ? [pr.poseLandmarks[16].x, pr.poseLandmarks[16].y] : null;
+    return instToCore(clipTracker.step(F, bh).pos, a);
+  };
+
+  const LABEL = { nut: 'Nut', bridge: 'Bridge', frog: 'Frog sticker', tip: 'Tip sticker' };
+  const PROMPT = {
+    nut: 'Tap the nut: the top of the fingerboard, where the strings leave it.',
+    bridge: 'Tap the bridge, where the strings cross it.',
+    frog: 'Tap the sticker near the frog.',
+    tip: 'Tap the sticker near the tip.'
+  };
+  const TR = { active: false, step: 'mark', frozen: false, F: null, marks: [], S: null, tr: null, pos: {}, paused: false, hist: [], drag: null, hand: null };
+
+  // map between the raw camera frame (0..1) and the on-screen box (handles letterboxing and the mirror)
+  function camGeom() {
+    const box = $('cam').getBoundingClientRect(), v = $('recVid');
+    const vw = v.videoWidth || 16, vh = v.videoHeight || 9, sc = Math.min(box.width / vw, box.height / vh);
+    const dw = vw * sc, dh = vh * sc;
+    return { box, ox: (box.width - dw) / 2, oy: (box.height - dh) / 2, dw, dh, mirror: $('recView').classList.contains('mirror') };
+  }
+  function toNorm(ev) {
+    const G = camGeom(); let x = ev.clientX - G.box.left; const y = ev.clientY - G.box.top;
+    if (G.mirror) x = G.box.width - x;
+    return [(x - G.ox) / G.dw, (y - G.oy) / G.dh];
+  }
+  function drawCam(pos, hand, opts = {}) {
+    const c = $('camOvl'), G = camGeom(), dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(G.box.width * dpr)) { c.width = Math.round(G.box.width * dpr); c.height = Math.round(G.box.height * dpr); }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, G.box.width, G.box.height);
+    const P = q => [G.ox + q[0] * G.dw, G.oy + q[1] * G.dh];
+    const line = (a, b, col, w, dash) => { if (!a || !b) return; const [x1, y1] = P(a), [x2, y2] = P(b); g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]); };
+    if (hand) { g.strokeStyle = '#9AABFF'; g.lineWidth = 2; g.beginPath(); HAND.forEach(([i, j]) => { const [x1, y1] = P(hand[i]), [x2, y2] = P(hand[j]); g.moveTo(x1, y1); g.lineTo(x2, y2); }); g.stroke(); }
+    line(pos.nut, pos.bridge, 'rgba(255,255,255,.7)', 2, [6, 5]);
+    line(pos.frog, pos.tip, '#7CF29C', 3);
+    for (const k of Inst.KEYS) {
+      const q = pos[k] || (opts.ghost && opts.ghost[k]); if (!q) continue;
+      const [x, y] = P(q), lost = !pos[k];
+      g.fillStyle = lost ? 'rgba(255,255,255,.25)' : (k === 'nut' || k === 'bridge' ? '#FFFFFF' : '#7CF29C');
+      g.strokeStyle = '#000'; g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, opts.big ? 11 : 7, 0, 7); g.fill(); g.stroke();
+      if (opts.labels) {
+        g.save(); g.translate(x, y); if (G.mirror) g.scale(-1, 1);
+        g.font = '600 13px system-ui, sans-serif'; g.fillStyle = '#fff'; g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 3;
+        g.strokeText(LABEL[k], 14, -10); g.fillText(LABEL[k], 14, -10); g.restore();
+      }
+    }
+  }
+
+  function trainUi() {
+    const s = TR.step;
+    $('trUndo').hidden = s !== 'mark';
+    if (s === 'mark') {
+      $('trStep').textContent = 'Training · step 1 of 2 · Mark the instrument';
+      const next = Inst.KEYS[TR.marks.length];
+      $('trText').textContent = !TR.frozen ? 'Sit in playing position with the bow on the string, then tap Freeze.' : next ? PROMPT[next] : 'All four marked. Tap Next to check the tracking.';
+      $('trMain').textContent = TR.frozen ? 'Retake' : 'Freeze';
+      $('trUndo').disabled = !TR.marks.length; $('trNext').disabled = TR.marks.length < 4; $('trNext').textContent = 'Next';
+      $('trQ').innerHTML = '';
+    } else {
+      $('trStep').textContent = 'Training · step 2 of 2 · Check and correct';
+      $('trText').textContent = TR.paused ? 'Drag any marker that is in the wrong place onto the right spot. Each correction teaches it. Then tap Resume.'
+        : 'Play some long bows and part of a scale. If a marker drifts off, tap Pause and drag it back. Save when everything stays green.';
+      $('trMain').textContent = TR.paused ? 'Resume' : 'Pause';
+      $('trNext').disabled = false; $('trNext').textContent = 'Save setup';
+    }
+  }
+  function trainQuality() {
+    const H = TR.hist.slice(-40); if (!H.length) return;
+    const pct = k => Math.round(100 * H.filter(h => h[k]).length / H.length);
+    const items = [['nut', 'Nut'], ['bridge', 'Bridge'], ['frog', 'Frog sticker'], ['tip', 'Tip sticker'], ['hand', 'Left hand']];
+    $('trQ').innerHTML = items.map(([k, l]) => { const v = pct(k); return `<span class="${v >= 85 ? 'g' : v >= 60 ? 'w' : 'b'}">${l} ${v}%</span>`; }).join('');
+  }
+  function trainStart() {
+    Object.assign(TR, { active: true, step: 'mark', frozen: false, F: null, marks: [], S: Inst.emptySetup(), tr: null, pos: {}, paused: false, hist: [], drag: null, hand: null });
+    $('recMeta').textContent += ' · training';
+    trainUi(); drawCam({}, null);
+  }
+  function rebuildMarks() { TR.S = Inst.emptySetup(); TR.pos = {}; TR.marks.forEach(m => { Inst.teach(TR.S, TR.F, m.key, m.x, m.y); TR.pos[m.key] = [m.x, m.y]; }); drawCam(TR.pos, null, { labels: true, big: true }); }
+
+  $('trMain').addEventListener('click', () => {
+    const v = $('recVid');
+    if (TR.step === 'mark') {
+      if (!TR.frozen) { TR.F = Inst.grab(v); if (!TR.F) return; v.pause(); TR.frozen = true; TR.marks = []; rebuildMarks(); }
+      else { v.play().catch(() => {}); TR.frozen = false; TR.marks = []; TR.pos = {}; drawCam({}, null); }
+      trainUi(); return;
+    }
+    if (!TR.paused) { v.pause(); TR.F = Inst.grab(v); TR.paused = true; drawCam(TR.pos, TR.hand, { labels: true, big: true, ghost: TR.ghost }); }
+    else { v.play().catch(() => {}); TR.paused = false; trainLoop(); }
+    trainUi();
+  });
+  $('trUndo').addEventListener('click', () => { if (TR.step !== 'mark' || !TR.marks.length) return; TR.marks.pop(); rebuildMarks(); trainUi(); });
+  $('trNext').addEventListener('click', () => {
+    if (TR.step === 'mark') {
+      if (TR.marks.length < 4) return;
+      TR.step = 'check'; TR.tr = Inst.tracker(TR.S); TR.hist = []; TR.ghost = Object.assign({}, TR.pos);
+      $('recVid').play().catch(() => {}); trainUi(); trainLoop(); return;
+    }
+    TR.S.saved = Date.now(); SETUP = TR.S; liveMode = true;
+    try { localStorage.setItem(SETUP_K, Inst.serialise(SETUP)); localStorage.setItem(LIVE_K, '1'); } catch (e) {}
+    renderSetup(); closeRec();
+    $('setupTxt').textContent = 'Saved. Live mode is on: the bow, bridge and nut will be tracked in his recordings.';
+  });
+
+  const cam = $('cam');
+  cam.addEventListener('pointerdown', ev => {
+    if (!TR.active) return;
+    const [x, y] = toNorm(ev);
+    if (TR.step === 'mark') {
+      if (!TR.frozen || TR.marks.length >= 4 || x < 0 || x > 1 || y < 0 || y > 1) return;
+      const key = Inst.KEYS[TR.marks.length];
+      const probe = Inst.emptySetup();
+      if (!Inst.teach(probe, TR.F, key, x, y)) { $('trText').textContent = "That spot doesn't look like a bright sticker. Tap right on the middle of the sticker."; return; }
+      TR.marks.push({ key, x, y }); rebuildMarks(); trainUi(); return;
+    }
+    if (TR.step === 'check' && TR.paused) {
+      const G = camGeom(); let best = null, bd = 34;
+      for (const k of Inst.KEYS) { const q = TR.pos[k] || (TR.ghost && TR.ghost[k]); if (!q) continue; const d = Math.hypot((q[0] - x) * G.dw, (q[1] - y) * G.dh); if (d < bd) { bd = d; best = k; } }
+      if (best) { TR.drag = best; cam.setPointerCapture(ev.pointerId); ev.preventDefault(); }
+    }
+  });
+  cam.addEventListener('pointermove', ev => {
+    if (!TR.drag) return; const q = toNorm(ev);
+    TR.pos[TR.drag] = q; drawCam(TR.pos, TR.hand, { labels: true, big: true, ghost: TR.ghost });
+  });
+  const endDrag = () => {
+    if (!TR.drag) return; const k = TR.drag, q = TR.pos[k]; TR.drag = null;
+    if (Inst.teach(TR.S, TR.F, k, q[0], q[1])) { TR.tr.reseed(k, q); TR.ghost[k] = q.slice(); $('trText').textContent = `${LABEL[k]} corrected and learned. Drag another, or tap Resume.`; }
+    else $('trText').textContent = "That spot doesn't look like a bright sticker. Drag it onto the middle of the sticker.";
+  };
+  cam.addEventListener('pointerup', endDrag); cam.addEventListener('pointercancel', endDrag);
+
+  async function trainLoop() {
+    if (TR.looping) return; TR.looping = true;
+    let m = null; try { m = await loadModels(); } catch (e) {}
+    const v = $('recVid');
+    while (TR.active && TR.step === 'check' && !TR.paused && REC.phase === 'ready') {
+      const t0 = performance.now();
+      if (v.readyState >= 2) {
+        let pr = null, hr = null;
+        if (m) { try { hr = await m.hands(v); pr = await m.pose(v); } catch (e) {} }
+        if (!TR.active || TR.paused) break;
+        const fr = buildFrame(0, hr, pr, 1);
+        const bh = pr && pr.poseLandmarks && pr.poseLandmarks[16] ? [pr.poseLandmarks[16].x, pr.poseLandmarks[16].y] : null;
+        const F = Inst.grab(v);
+        if (F) {
+          const r = TR.tr.step(F, bh); TR.pos = r.pos;
+          Inst.KEYS.forEach(k => { if (r.pos[k]) TR.ghost[k] = r.pos[k].slice(); });
+          TR.hand = fr.lh ? fr.lh.map(q => [q.x, q.y]) : null;
+          TR.hist.push({ nut: !!r.pos.nut, bridge: !!r.pos.bridge, frog: !!r.pos.frog, tip: !!r.pos.tip, hand: !!fr.lh });
+          drawCam(TR.pos, TR.hand, { labels: true }); trainQuality();
+        }
+      }
+      const took = performance.now() - t0;
+      await sleep(Math.max(20, Math.max(110, took * 1.4) - took));
+    }
+    TR.looping = false;
+  }
 
   $('saveVid').addEventListener('click', async () => {
     const f = state.file; if (!f) return;
